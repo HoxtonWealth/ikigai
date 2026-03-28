@@ -1,7 +1,7 @@
 # Progress
 
-## Current Phase: Epic 3
-## Current Task: Welcome, Results & Deploy
+## Current Phase: Deployment
+## Current Task: Story 3.6 — Vercel deployment
 
 ## Completed
 - [x] Architecture document
@@ -25,12 +25,12 @@
 - [x] Story 2.4 — Coaching session screen (/session + components)
 - [x] Story 2.5 — Text input fallback (always-visible, hides mic when unsupported)
 
-## Epic 3 — Welcome, Results & Deploy (2 sessions)
-- [ ] Story 3.1 — Welcome screen
-- [ ] Story 3.2 — Ikigai diagram component
-- [ ] Story 3.3 — Results screen
-- [ ] Story 3.4 — Synthesizing transition screen
-- [ ] Story 3.5 — Design polish & mobile
+## Epic 3 — Welcome, Results & Polish (DONE except deploy)
+- [x] Story 3.1 — Welcome screen (Ikigai preview SVG, mic permission, Begin button)
+- [x] Story 3.2 — Ikigai diagram component (4 overlapping circles with themes)
+- [x] Story 3.3 — Results screen (diagram, synthesis, themes grid, Start Over)
+- [x] Story 3.4 — Synthesizing transition screen (built into /session)
+- [x] Story 3.5 — Design polish & mobile (warm palette, scrollbar, mic pulse)
 - [ ] Story 3.6 — Vercel deployment
 
 ## Blockers
