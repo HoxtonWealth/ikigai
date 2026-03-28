@@ -32,8 +32,20 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
   const unlock = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    // Play a tiny silent buffer to unlock the audio context
-    audio.src = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV////////////////////////////////////////////AAAAAExhdmM1OC4xMwAAAAAAAAAAAAAAACQAAAAAAAAAAQGwmRMdvAAAAAAAAAAAAAAAAAAAAP/jOMAAAMcAJAAAAABnAHAAAA/g0AA3gAICAf//+D4Pg+AQBAH/ygIAgD/5QEAf/KAn8oCAP/KBAH/+UBAH/5cAn8oCf/5QEAfwfB8HwfB8AAAAADLAAAAAAAA';
+    // Use AudioContext to generate a short silent buffer — more reliable than base64 MP3
+    try {
+      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      const buffer = ctx.createBuffer(1, 1, 22050);
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start();
+      ctx.resume();
+    } catch {
+      // Ignore
+    }
+    // Also unlock the HTML audio element itself
+    audio.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
     audio.volume = 0;
     audio.play().then(() => {
       audio.pause();
@@ -72,8 +84,8 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
 
       try {
         await audio.play();
-      } catch {
-        // Autoplay blocked — try unlocking and retrying once
+      } catch (err) {
+        console.error('[AudioPlayer] play() failed:', err);
         setIsPlaying(false);
       }
     },

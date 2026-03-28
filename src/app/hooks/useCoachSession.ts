@@ -130,12 +130,14 @@ export function useCoachSession() {
 
           if (ttsRes.ok) {
             const audioData = await ttsRes.arrayBuffer();
+            console.log('[CoachSession] TTS audio received, size:', audioData.byteLength);
             await playAudio(audioData);
           } else {
-            // TTS failed, just show text
+            console.error('[CoachSession] TTS failed:', ttsRes.status, await ttsRes.text());
             setState((prev) => ({ ...prev, isCoachSpeaking: false }));
           }
-        } catch {
+        } catch (err) {
+          console.error('[CoachSession] TTS error:', err);
           setState((prev) => ({ ...prev, isCoachSpeaking: false }));
         }
       } catch {
@@ -176,14 +178,18 @@ export function useCoachSession() {
 
         if (ttsRes.ok) {
           const audioData = await ttsRes.arrayBuffer();
+          console.log('[CoachSession] Start TTS audio received, size:', audioData.byteLength);
           await playAudio(audioData);
         } else {
+          console.error('[CoachSession] Start TTS failed:', ttsRes.status, await ttsRes.text());
           setState((prev) => ({ ...prev, isCoachSpeaking: false }));
         }
-      } catch {
+      } catch (err) {
+        console.error('[CoachSession] Start TTS error:', err);
         setState((prev) => ({ ...prev, isCoachSpeaking: false }));
       }
-    } catch {
+    } catch (err) {
+      console.error('[CoachSession] Start session error:', err);
       setState((prev) => ({ ...prev, isLoading: false }));
     }
   }, [playAudio]);
