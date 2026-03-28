@@ -1,7 +1,7 @@
 # Progress
 
-## Current Phase: Pre-Implementation
-## Current Task: Push foundation to repo, then start Epic 1
+## Current Phase: Epic 2
+## Current Task: Voice Chat UI
 
 ## Completed
 - [x] Architecture document
@@ -9,13 +9,14 @@
 - [x] Memory files created
 - [x] Session templates created
 - [x] Epics & stories defined (16 stories across 3 epics)
+- [x] Git repo initialized and pushed to GitHub (HoxtonWealth/ikigai)
 
-## Epic 1 — Scaffold & API Routes (1 session)
-- [ ] Story 1.1 — Initialize Next.js project
-- [ ] Story 1.2 — OpenRouter chat API route
-- [ ] Story 1.3 — ElevenLabs TTS API route
-- [ ] Story 1.4 — AI coach prompts system
-- [ ] Story 1.5 — TypeScript types
+## Epic 1 — Scaffold & API Routes (DONE)
+- [x] Story 1.1 — Initialize Next.js 14 project (App Router, TypeScript, Tailwind)
+- [x] Story 1.2 — OpenRouter chat API route (/api/chat)
+- [x] Story 1.3 — ElevenLabs TTS API route (/api/tts)
+- [x] Story 1.4 — AI coach prompts system (phase-specific prompts)
+- [x] Story 1.5 — TypeScript types (Message, Phase, SessionState, IkigaiSynthesis)
 
 ## Epic 2 — Voice Chat UI (2 sessions)
 - [ ] Story 2.1 — Speech recognition hook
