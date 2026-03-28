@@ -21,6 +21,7 @@ export default function SessionPage() {
     sendMessage,
     startSession,
     setUserSpeaking,
+    unlockAudio,
   } = useCoachSession();
 
   const {
@@ -34,17 +35,16 @@ export default function SessionPage() {
   } = useSpeechRecognition();
 
   const [textInput, setTextInput] = useState('');
+  const [hasStarted, setHasStarted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const hasStarted = useRef(false);
   const wasCoachSpeaking = useRef(false);
 
-  // Start session on mount
-  useEffect(() => {
-    if (!hasStarted.current) {
-      hasStarted.current = true;
-      startSession();
-    }
-  }, [startSession]);
+  // User clicks to start — this is the user gesture that unlocks audio
+  const handleStart = useCallback(() => {
+    unlockAudio();
+    setHasStarted(true);
+    startSession();
+  }, [unlockAudio, startSession]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -110,6 +110,31 @@ export default function SessionPage() {
   );
 
   const micDisabled = isCoachSpeaking || isLoading;
+
+  // Pre-start screen — user gesture unlocks audio playback
+  if (!hasStarted) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-[var(--background)]">
+        <div className="text-center max-w-sm">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-violet-100 flex items-center justify-center text-3xl">
+            🧘
+          </div>
+          <h2 className="text-2xl font-semibold text-[#2D2A26] mb-3">
+            Ready to begin?
+          </h2>
+          <p className="text-gray-500 mb-8 leading-relaxed">
+            Your coach will speak to you and listen to your responses. Find a quiet space and tap below to start.
+          </p>
+          <button
+            onClick={handleStart}
+            className="px-8 py-4 rounded-full bg-violet-500 text-white text-lg font-semibold hover:bg-violet-600 active:scale-95 transition-all shadow-lg shadow-violet-200"
+          >
+            Start Conversation
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Synthesizing screen
   if (phase === 'synthesizing' || (phase === 'results' && synthesis)) {

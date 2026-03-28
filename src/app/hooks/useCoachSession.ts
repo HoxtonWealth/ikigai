@@ -34,7 +34,7 @@ export function useCoachSession() {
     setState((prev) => ({ ...prev, isCoachSpeaking: false }));
   }, []);
 
-  const { play: playAudio, stop: stopAudio, isPlaying } = useAudioPlayer(onAudioEnded);
+  const { play: playAudio, stop: stopAudio, isPlaying, unlock: unlockAudio } = useAudioPlayer(onAudioEnded);
 
   const sendMessage = useCallback(
     async (userText: string) => {
@@ -212,5 +212,6 @@ export function useCoachSession() {
     startSession,
     setUserSpeaking,
     reset,
+    unlockAudio,
   };
 }
