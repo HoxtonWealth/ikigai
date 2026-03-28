@@ -1,7 +1,7 @@
 # Progress
 
-## Current Phase: Epic 2
-## Current Task: Voice Chat UI
+## Current Phase: Epic 3
+## Current Task: Welcome, Results & Deploy
 
 ## Completed
 - [x] Architecture document
@@ -18,12 +18,12 @@
 - [x] Story 1.4 — AI coach prompts system (phase-specific prompts)
 - [x] Story 1.5 — TypeScript types (Message, Phase, SessionState, IkigaiSynthesis)
 
-## Epic 2 — Voice Chat UI (2 sessions)
-- [ ] Story 2.1 — Speech recognition hook
-- [ ] Story 2.2 — Audio player hook
-- [ ] Story 2.3 — Coach session state machine
-- [ ] Story 2.4 — Coaching session screen
-- [ ] Story 2.5 — Text input fallback
+## Epic 2 — Voice Chat UI (DONE)
+- [x] Story 2.1 — Speech recognition hook (useSpeechRecognition)
+- [x] Story 2.2 — Audio player hook (useAudioPlayer)
+- [x] Story 2.3 — Coach session state machine (useCoachSession)
+- [x] Story 2.4 — Coaching session screen (/session + components)
+- [x] Story 2.5 — Text input fallback (always-visible, hides mic when unsupported)
 
 ## Epic 3 — Welcome, Results & Deploy (2 sessions)
 - [ ] Story 3.1 — Welcome screen
