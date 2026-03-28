@@ -27,6 +27,7 @@ export default function SessionPage() {
     isListening,
     isSupported,
     transcript,
+    transcriptRef,
     startListening,
     stopListening,
     resetTranscript,
@@ -35,6 +36,7 @@ export default function SessionPage() {
   const [textInput, setTextInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasStarted = useRef(false);
+  const wasCoachSpeaking = useRef(false);
 
   // Start session on mount
   useEffect(() => {
@@ -49,32 +51,46 @@ export default function SessionPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
+  // Auto-activate mic when coach finishes speaking
+  useEffect(() => {
+    if (wasCoachSpeaking.current && !isCoachSpeaking && !isLoading && isSupported) {
+      // Coach just finished speaking — auto-start mic for user's turn
+      const timer = setTimeout(() => {
+        resetTranscript();
+        startListening();
+        setUserSpeaking(true);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+    wasCoachSpeaking.current = isCoachSpeaking;
+  }, [isCoachSpeaking, isLoading, isSupported, resetTranscript, startListening, setUserSpeaking]);
+
   // Navigate to results when synthesis is ready
   useEffect(() => {
     if (phase === 'results' && synthesis) {
-      // Small delay so user sees the transition
+      // Stop mic if it's on
+      if (isListening) stopListening();
       const timer = setTimeout(() => {
-        // Store synthesis in sessionStorage for results page
         sessionStorage.setItem('ikigai-synthesis', JSON.stringify(synthesis));
         router.push('/results');
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [phase, synthesis, router]);
+  }, [phase, synthesis, router, isListening, stopListening]);
 
-  // When user stops recording, send the transcript
+  // When user clicks stop — use ref to get latest transcript (no stale closure)
   const handleStopRecording = useCallback(() => {
     stopListening();
     setUserSpeaking(false);
     // Small delay to let final transcript settle
     setTimeout(() => {
-      const finalText = transcript.trim();
+      const finalText = (transcriptRef.current ?? '').trim();
       if (finalText) {
         sendMessage(finalText);
         resetTranscript();
       }
     }, 300);
-  }, [stopListening, setUserSpeaking, transcript, sendMessage, resetTranscript]);
+  }, [stopListening, setUserSpeaking, transcriptRef, sendMessage, resetTranscript]);
 
   const handleStartRecording = useCallback(() => {
     resetTranscript();

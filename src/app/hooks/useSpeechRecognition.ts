@@ -8,6 +8,7 @@ type UseSpeechRecognitionReturn = {
   isListening: boolean;
   isSupported: boolean;
   transcript: string;
+  transcriptRef: React.RefObject<string>;
   startListening: () => void;
   stopListening: () => void;
   resetTranscript: () => void;
@@ -17,8 +18,9 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [isSupported, setIsSupported] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef<string>('');
+  const isStoppingRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -29,32 +31,38 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     if (SpeechRecognition) {
       setIsSupported(true);
       const recognition = new SpeechRecognition();
-      recognition.continuous = false;
+      recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
       recognition.onresult = (event: any) => {
-        let finalTranscript = '';
-        let interimTranscript = '';
-
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const result = event.results[i];
-          if (result.isFinal) {
-            finalTranscript += result[0].transcript;
-          } else {
-            interimTranscript += result[0].transcript;
-          }
+        let full = '';
+        for (let i = 0; i < event.results.length; i++) {
+          full += event.results[i][0].transcript;
         }
-
-        setTranscript(finalTranscript || interimTranscript);
+        transcriptRef.current = full;
+        setTranscript(full);
       };
 
       recognition.onend = () => {
-        setIsListening(false);
+        // With continuous: true, recognition can end unexpectedly (e.g. silence timeout).
+        // Restart if we haven't explicitly stopped.
+        if (!isStoppingRef.current && recognitionRef.current) {
+          try {
+            recognitionRef.current.start();
+          } catch {
+            setIsListening(false);
+          }
+        } else {
+          setIsListening(false);
+        }
       };
 
-      recognition.onerror = () => {
+      recognition.onerror = (event: any) => {
+        // 'no-speech' is normal — don't stop listening for it
+        if (event.error === 'no-speech') return;
         setIsListening(false);
+        isStoppingRef.current = false;
       };
 
       recognitionRef.current = recognition;
@@ -63,18 +71,26 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
 
   const startListening = useCallback(() => {
     if (!recognitionRef.current) return;
+    isStoppingRef.current = false;
+    transcriptRef.current = '';
     setTranscript('');
-    recognitionRef.current.start();
-    setIsListening(true);
+    try {
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch {
+      // Already started — ignore
+    }
   }, []);
 
   const stopListening = useCallback(() => {
     if (!recognitionRef.current) return;
+    isStoppingRef.current = true;
     recognitionRef.current.stop();
     setIsListening(false);
   }, []);
 
   const resetTranscript = useCallback(() => {
+    transcriptRef.current = '';
     setTranscript('');
   }, []);
 
@@ -82,6 +98,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
     isListening,
     isSupported,
     transcript,
+    transcriptRef,
     startListening,
     stopListening,
     resetTranscript,
