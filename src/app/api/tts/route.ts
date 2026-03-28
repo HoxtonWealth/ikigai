@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[TTS] Error:', message);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

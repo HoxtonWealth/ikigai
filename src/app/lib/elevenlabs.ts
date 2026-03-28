@@ -2,6 +2,8 @@ export async function textToSpeech(text: string): Promise<ArrayBuffer> {
   const voiceId = process.env.ELEVENLABS_VOICE_ID;
   const apiKey = process.env.ELEVENLABS_API_KEY;
 
+  console.log('[TTS] Calling ElevenLabs:', { voiceId: voiceId ? `${voiceId.slice(0, 6)}...` : 'MISSING', apiKeySet: !!apiKey, textLength: text.length });
+
   const response = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
     {
