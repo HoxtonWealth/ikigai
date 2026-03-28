@@ -3,10 +3,10 @@
 import { useRouter } from 'next/navigation';
 
 const CIRCLES = [
-  { label: 'What you Love', color: '#F87171', x: 140, y: 100 },
-  { label: 'What you\'re Good At', color: '#FBBF24', x: 220, y: 100 },
-  { label: 'What the World Needs', color: '#34D399', x: 140, y: 175 },
-  { label: 'What you can be Paid For', color: '#A78BFA', x: 220, y: 175 },
+  { label: 'Ce que vous Aimez', color: '#F87171', x: 140, y: 100 },
+  { label: 'Vos Talents', color: '#FBBF24', x: 220, y: 100 },
+  { label: 'Ce dont le Monde a Besoin', color: '#34D399', x: 140, y: 175 },
+  { label: 'Ce pour quoi on vous Paie', color: '#A78BFA', x: 220, y: 175 },
 ];
 
 function IkigaiPreview() {
@@ -57,7 +57,7 @@ function IkigaiPreview() {
         className="text-[10px]"
         fill="#6B6560"
       >
-        Your reason for being
+        Votre raison d&apos;être
       </text>
     </svg>
   );
@@ -80,31 +80,31 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center p-6 sm:p-8">
       <div className="max-w-md w-full text-center">
         <h1 className="text-3xl sm:text-4xl font-bold text-[#2D2A26] mb-2">
-          Ikigai Coach
+          Coach Ikigai
         </h1>
         <p className="text-base sm:text-lg text-[#6B6560] mb-8">
-          Discover your reason for being through a guided voice conversation
+          Découvrez votre raison d&apos;être à travers une conversation vocale guidée
         </p>
 
         <IkigaiPreview />
 
         <p className="text-sm text-[#8B8580] mt-6 mb-8 leading-relaxed px-4">
-          Ikigai is the Japanese concept of finding purpose at the intersection of
-          what you <strong>love</strong>, what you&apos;re <strong>good at</strong>,
-          what the <strong>world needs</strong>, and what you can be{' '}
-          <strong>paid for</strong>. This ~20 minute coaching session will help you
-          explore each dimension.
+          L&apos;Ikigai est le concept japonais qui consiste à trouver sa raison d&apos;être
+          à l&apos;intersection de ce que vous <strong>aimez</strong>, ce dans quoi vous
+          êtes <strong>doué(e)</strong>, ce dont le <strong>monde a besoin</strong>,
+          et ce pour quoi vous pouvez être <strong>payé(e)</strong>. Cette session de
+          coaching d&apos;environ 20 minutes vous aidera à explorer chaque dimension.
         </p>
 
         <button
           onClick={handleBegin}
           className="px-8 py-4 rounded-full bg-violet-500 text-white text-lg font-semibold hover:bg-violet-600 active:scale-95 transition-all shadow-lg shadow-violet-200"
         >
-          Begin Your Journey
+          Commencer votre voyage
         </button>
 
         <p className="text-xs text-[#A8A3A0] mt-4">
-          Works best in Chrome with a microphone. Text input available as fallback.
+          Fonctionne mieux sur Chrome avec un microphone. Saisie texte disponible en alternative.
         </p>
       </div>
     </main>

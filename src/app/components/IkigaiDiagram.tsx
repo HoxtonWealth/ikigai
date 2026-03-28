@@ -3,10 +3,10 @@
 import { IkigaiSynthesis } from '../lib/types';
 
 const CIRCLES = [
-  { label: 'Love', color: '#F87171', x: 140, y: 105, themes: 'love' as const },
-  { label: 'Good At', color: '#FBBF24', x: 220, y: 105, themes: 'goodAt' as const },
-  { label: 'World Needs', color: '#34D399', x: 140, y: 180, themes: 'worldNeeds' as const },
-  { label: 'Paid For', color: '#A78BFA', x: 220, y: 180, themes: 'paidFor' as const },
+  { label: 'Amour', color: '#F87171', x: 140, y: 105, themes: 'love' as const },
+  { label: 'Talents', color: '#FBBF24', x: 220, y: 105, themes: 'goodAt' as const },
+  { label: 'Le Monde', color: '#34D399', x: 140, y: 180, themes: 'worldNeeds' as const },
+  { label: 'Carrière', color: '#A78BFA', x: 220, y: 180, themes: 'paidFor' as const },
 ];
 
 export function IkigaiDiagram({ synthesis }: { synthesis: IkigaiSynthesis }) {

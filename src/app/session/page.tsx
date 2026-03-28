@@ -120,16 +120,16 @@ export default function SessionPage() {
             🧘
           </div>
           <h2 className="text-2xl font-semibold text-[#2D2A26] mb-3">
-            Ready to begin?
+            Prêt(e) à commencer ?
           </h2>
           <p className="text-gray-500 mb-8 leading-relaxed">
-            Your coach will speak to you and listen to your responses. Find a quiet space and tap below to start.
+            Votre coach va vous parler et écouter vos réponses. Trouvez un endroit calme et appuyez ci-dessous pour démarrer.
           </p>
           <button
             onClick={handleStart}
             className="px-8 py-4 rounded-full bg-violet-500 text-white text-lg font-semibold hover:bg-violet-600 active:scale-95 transition-all shadow-lg shadow-violet-200"
           >
-            Start Conversation
+            Démarrer la conversation
           </button>
         </div>
       </div>
@@ -145,9 +145,9 @@ export default function SessionPage() {
             🧘
           </div>
           <h2 className="text-2xl font-semibold text-[#2D2A26] mb-3">
-            Reflecting on everything you shared...
+            Réflexion sur tout ce que vous avez partagé...
           </h2>
-          <p className="text-gray-500">Discovering the connections between your passions, skills, and purpose</p>
+          <p className="text-gray-500">Découverte des connexions entre vos passions, compétences et raison d&apos;être</p>
           <div className="mt-8 flex justify-center gap-2">
             <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '0ms' }} />
             <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -218,10 +218,10 @@ export default function SessionPage() {
                 onChange={(e) => setTextInput(e.target.value)}
                 placeholder={
                   isCoachSpeaking
-                    ? 'Coach is speaking...'
+                    ? 'Le coach parle...'
                     : isLoading
-                    ? 'Thinking...'
-                    : 'Type your response...'
+                    ? 'Réflexion...'
+                    : 'Tapez votre réponse...'
                 }
                 disabled={isCoachSpeaking || isLoading}
                 className="flex-1 rounded-full px-4 py-3 border border-gray-200 focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400 text-sm disabled:opacity-50 disabled:cursor-not-allowed bg-white"
@@ -231,7 +231,7 @@ export default function SessionPage() {
                 disabled={!textInput.trim() || isCoachSpeaking || isLoading}
                 className="px-4 py-3 rounded-full bg-violet-500 text-white text-sm font-medium hover:bg-violet-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Send
+                Envoyer
               </button>
             </form>
 
@@ -247,7 +247,7 @@ export default function SessionPage() {
 
           {!isSupported && (
             <p className="text-xs text-gray-400 text-center mt-2">
-              Voice not supported in this browser — type your responses instead
+              La voix n&apos;est pas supportée dans ce navigateur — tapez vos réponses à la place
             </p>
           )}
         </div>

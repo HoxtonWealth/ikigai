@@ -5,8 +5,8 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Ikigai Coach",
-  description: "Discover your reason for being through a voice-guided coaching session",
+  title: "Coach Ikigai",
+  description: "Découvrez votre raison d'être à travers une session de coaching guidée par la voix",
 };
 
 export default function RootLayout({
@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="fr">
       <body className={`${inter.className} antialiased`}>
         {children}
       </body>

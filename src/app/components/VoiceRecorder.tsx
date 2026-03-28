@@ -29,7 +29,7 @@ export function VoiceRecorder({
             ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
             : 'bg-violet-500 text-white hover:bg-violet-600 hover:scale-105 active:scale-95'
         }`}
-        aria-label={isListening ? 'Tap to finish speaking' : 'Tap to speak'}
+        aria-label={isListening ? 'Appuyez pour terminer' : 'Appuyez pour parler'}
       >
         {isListening ? (
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
@@ -44,7 +44,7 @@ export function VoiceRecorder({
         )}
       </button>
       {isListening && (
-        <span className="text-[10px] text-red-500 font-medium">Tap to finish</span>
+        <span className="text-[10px] text-red-500 font-medium">Appuyez pour terminer</span>
       )}
     </div>
   );

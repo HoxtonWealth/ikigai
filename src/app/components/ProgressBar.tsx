@@ -3,10 +3,10 @@
 import { Phase } from '../lib/types';
 
 const CIRCLES = [
-  { phase: 'love', label: 'Love', color: 'bg-rose-400' },
-  { phase: 'good_at', label: 'Good At', color: 'bg-amber-400' },
-  { phase: 'world_needs', label: 'World Needs', color: 'bg-emerald-400' },
-  { phase: 'paid_for', label: 'Paid For', color: 'bg-violet-400' },
+  { phase: 'love', label: 'Amour', color: 'bg-rose-400' },
+  { phase: 'good_at', label: 'Talents', color: 'bg-amber-400' },
+  { phase: 'world_needs', label: 'Le Monde', color: 'bg-emerald-400' },
+  { phase: 'paid_for', label: 'Carrière', color: 'bg-violet-400' },
 ] as const;
 
 const PHASE_ORDER = ['love', 'good_at', 'world_needs', 'paid_for'];
