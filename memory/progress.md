@@ -33,5 +33,8 @@
 - [x] Story 3.5 — Design polish & mobile (warm palette, scrollbar, mic pulse)
 - [ ] Story 3.6 — Vercel deployment
 
+## Ad Hoc Improvements
+- [x] Cross-referencing instructions in phase prompts (good_at, world_needs, paid_for now reference earlier answers)
+
 ## Blockers
 None
