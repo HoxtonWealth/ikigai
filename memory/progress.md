@@ -35,6 +35,8 @@
 
 ## Ad Hoc Improvements
 - [x] Cross-referencing instructions in phase prompts (good_at, world_needs, paid_for now reference earlier answers)
+- [x] Welcome page redesign — scrollable 5-section layout (Hero, Ikigai explainer, How it works, Walk-along guide, CTA)
+- [x] Onboarding tooltip on /session — one-time overlay with mic instructions after clicking "Démarrer la conversation"
 
 ## Blockers
 None

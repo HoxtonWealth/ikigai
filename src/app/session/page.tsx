@@ -36,6 +36,7 @@ export default function SessionPage() {
 
   const [textInput, setTextInput] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wasCoachSpeaking = useRef(false);
 
@@ -43,8 +44,13 @@ export default function SessionPage() {
   const handleStart = useCallback(() => {
     unlockAudio();
     setHasStarted(true);
+    setShowOnboarding(true);
+  }, [unlockAudio]);
+
+  const handleDismissOnboarding = useCallback(() => {
+    setShowOnboarding(false);
     startSession();
-  }, [unlockAudio, startSession]);
+  }, [startSession]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -103,10 +109,16 @@ export default function SessionPage() {
       e.preventDefault();
       const text = textInput.trim();
       if (!text) return;
+      // If mic is on, stop it — user chose to type instead
+      if (isListening) {
+        stopListening();
+        setUserSpeaking(false);
+        resetTranscript();
+      }
       sendMessage(text);
       setTextInput('');
     },
-    [textInput, sendMessage]
+    [textInput, sendMessage, isListening, stopListening, setUserSpeaking, resetTranscript]
   );
 
   const micDisabled = isCoachSpeaking || isLoading;
@@ -130,6 +142,40 @@ export default function SessionPage() {
             className="px-8 py-4 rounded-full bg-violet-500 text-white text-lg font-semibold hover:bg-violet-600 active:scale-95 transition-all shadow-lg shadow-violet-200"
           >
             Démarrer la conversation
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Onboarding tooltip — shown once after "Démarrer la conversation"
+  if (showOnboarding) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+        <div className="max-w-sm w-full mx-4 rounded-2xl bg-white p-6 shadow-xl text-center">
+          <div className="text-3xl mb-3">🎙️</div>
+          <h3 className="text-lg font-semibold text-[#2D2A26] mb-4">
+            Comment parler au coach
+          </h3>
+          <ul className="text-sm text-[#6B6560] text-left space-y-2 mb-6">
+            <li className="flex gap-2">
+              <span className="text-violet-500 flex-shrink-0">•</span>
+              Appuyez et maintenez le bouton micro pour parler
+            </li>
+            <li className="flex gap-2">
+              <span className="text-violet-500 flex-shrink-0">•</span>
+              Relâchez pour envoyer votre réponse
+            </li>
+            <li className="flex gap-2">
+              <span className="text-violet-500 flex-shrink-0">•</span>
+              Vous pouvez aussi taper dans le champ texte
+            </li>
+          </ul>
+          <button
+            onClick={handleDismissOnboarding}
+            className="px-6 py-3 rounded-full bg-violet-500 text-white font-semibold hover:bg-violet-600 active:scale-95 transition-all"
+          >
+            Compris !
           </button>
         </div>
       </div>
