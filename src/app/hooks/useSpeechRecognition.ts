@@ -33,7 +33,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = 'en-US';
+      recognition.lang = 'fr-FR';
 
       recognition.onresult = (event: any) => {
         let full = '';
