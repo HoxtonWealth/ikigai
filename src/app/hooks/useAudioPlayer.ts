@@ -6,6 +6,7 @@ type UseAudioPlayerReturn = {
   isPlaying: boolean;
   play: (audioData: ArrayBuffer) => Promise<void>;
   enqueue: (audioData: ArrayBuffer) => void;
+  seal: () => void;
   stop: () => void;
   unlock: () => void;
 };
@@ -17,6 +18,8 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
   const onEndedRef = useRef(onEnded);
   const queueRef = useRef<ArrayBuffer[]>([]);
   const playingRef = useRef(false);
+  // Sealed = no more audio will be enqueued. Only fire onEnded when sealed + queue empty.
+  const sealedRef = useRef(false);
   onEndedRef.current = onEnded;
 
   // Create a persistent audio element once
@@ -57,14 +60,18 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
     });
   }, []);
 
-  // Play next chunk from queue, or fire onEnded when empty
+  // Play next chunk from queue, or fire onEnded when sealed + empty
   const playNextRef = useRef<() => void>();
   playNextRef.current = () => {
     const next = queueRef.current.shift();
     if (!next) {
       setIsPlaying(false);
       playingRef.current = false;
-      onEndedRef.current?.();
+      // Only fire onEnded when sealed (all audio enqueued, truly done)
+      if (sealedRef.current) {
+        sealedRef.current = false;
+        onEndedRef.current?.();
+      }
       return;
     }
 
@@ -100,9 +107,19 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
 
   // Enqueue audio for sequential playback
   const enqueue = useCallback((audioData: ArrayBuffer) => {
+    sealedRef.current = false; // More audio arriving, not done yet
     queueRef.current.push(audioData);
     if (!playingRef.current) {
       playNextRef.current?.();
+    }
+  }, []);
+
+  // Signal that no more audio will be enqueued for this response
+  const seal = useCallback(() => {
+    sealedRef.current = true;
+    // If nothing is playing and queue is already empty, fire onEnded now
+    if (!playingRef.current && queueRef.current.length === 0) {
+      onEndedRef.current?.();
     }
   }, []);
 
@@ -110,6 +127,7 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
   const play = useCallback(
     async (audioData: ArrayBuffer) => {
       queueRef.current = [];
+      sealedRef.current = true; // Single play is always sealed
       const audio = audioRef.current;
       if (!audio) return;
 
@@ -124,6 +142,7 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
       audio.onended = () => {
         setIsPlaying(false);
         playingRef.current = false;
+        sealedRef.current = false;
         onEndedRef.current?.();
       };
 
@@ -149,6 +168,7 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
 
   const stop = useCallback(() => {
     queueRef.current = [];
+    sealedRef.current = false;
     const audio = audioRef.current;
     if (audio) {
       audio.pause();
@@ -158,5 +178,5 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
     playingRef.current = false;
   }, []);
 
-  return { isPlaying, play, enqueue, stop, unlock };
+  return { isPlaying, play, enqueue, seal, stop, unlock };
 }

@@ -81,7 +81,7 @@ export function useCoachSession() {
     setState((prev) => ({ ...prev, isCoachSpeaking: false }));
   }, []);
 
-  const { enqueue: enqueueAudio, stop: stopAudio, isPlaying, unlock: unlockAudio } = useAudioPlayer(onAudioEnded);
+  const { enqueue: enqueueAudio, seal: sealAudio, stop: stopAudio, isPlaying, unlock: unlockAudio } = useAudioPlayer(onAudioEnded);
 
   // Fire TTS for a sentence and enqueue audio when ready
   const ttsSentence = useCallback(
@@ -149,8 +149,9 @@ export function useCoachSession() {
         },
       );
 
-      // Wait for all TTS to complete and enqueue
+      // Wait for all TTS to complete and enqueue, then seal
       await audioChain;
+      sealAudio();
 
       // Final state with authoritative text + phase transition
       setState((prev) => ({
@@ -163,7 +164,7 @@ export function useCoachSession() {
         currentPhaseMessages: shouldTransition ? 0 : newPhaseCount,
       }));
     },
-    [ttsSentence, enqueueAudio]
+    [ttsSentence, enqueueAudio, sealAudio]
   );
 
   const sendMessage = useCallback(
