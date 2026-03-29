@@ -220,6 +220,24 @@ export default function SessionPage() {
       {/* Messages area */}
       <main className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-2xl mx-auto">
+          {/* First-message loading: prominent centered state */}
+          {messages.length === 0 && isLoading && (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-violet-100 flex items-center justify-center animate-pulse text-2xl">
+                🧘
+              </div>
+              <p className="text-base font-medium text-[#2D2A26] mb-1">
+                Votre coach pr&eacute;pare sa premi&egrave;re question...
+              </p>
+              <p className="text-sm text-[#8B8580]">Cela prend quelques secondes</p>
+              <div className="mt-4 flex justify-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </div>
+          )}
+
           {messages.map((msg, i) =>
             msg.role === 'assistant' ? (
               <CoachBubble
@@ -232,7 +250,7 @@ export default function SessionPage() {
             ) : null
           )}
 
-          {isLoading && (
+          {messages.length > 0 && isLoading && (
             <div className="flex justify-start mb-4">
               <div className="flex items-start gap-2">
                 <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0 text-sm">
