@@ -40,17 +40,18 @@ export default function SessionPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wasCoachSpeaking = useRef(false);
 
-  // User clicks to start — this is the user gesture that unlocks audio
+  // User clicks to start — unlock audio and begin API call immediately
+  // The onboarding tooltip covers the loading time
   const handleStart = useCallback(() => {
     unlockAudio();
     setHasStarted(true);
     setShowOnboarding(true);
-  }, [unlockAudio]);
+    startSession();
+  }, [unlockAudio, startSession]);
 
   const handleDismissOnboarding = useCallback(() => {
     setShowOnboarding(false);
-    startSession();
-  }, [startSession]);
+  }, []);
 
   // Auto-scroll to bottom
   useEffect(() => {
