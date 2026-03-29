@@ -31,6 +31,7 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
     return () => {
       audio.pause();
       audio.src = '';
+      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
     };
   }, []);
 
@@ -60,6 +61,15 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
     });
   }, []);
 
+  // Load audio data into the persistent audio element
+  const loadAudio = (audio: HTMLAudioElement, data: ArrayBuffer) => {
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    const blob = new Blob([data], { type: 'audio/mpeg' });
+    const url = URL.createObjectURL(blob);
+    urlRef.current = url;
+    audio.src = url;
+  };
+
   // Play next chunk from queue, or fire onEnded when sealed + empty
   const playNextRef = useRef<() => void>();
   playNextRef.current = () => {
@@ -78,13 +88,7 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (urlRef.current) {
-      URL.revokeObjectURL(urlRef.current);
-    }
-
-    const blob = new Blob([next], { type: 'audio/mpeg' });
-    const url = URL.createObjectURL(blob);
-    urlRef.current = url;
+    loadAudio(audio, next);
 
     audio.onended = () => {
       playingRef.current = false;
@@ -95,7 +99,6 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
       playNextRef.current?.();
     };
 
-    audio.src = url;
     playingRef.current = true;
     setIsPlaying(true);
 
@@ -131,13 +134,7 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
       const audio = audioRef.current;
       if (!audio) return;
 
-      if (urlRef.current) {
-        URL.revokeObjectURL(urlRef.current);
-      }
-
-      const blob = new Blob([audioData], { type: 'audio/mpeg' });
-      const url = URL.createObjectURL(blob);
-      urlRef.current = url;
+      loadAudio(audio, audioData);
 
       audio.onended = () => {
         setIsPlaying(false);
@@ -151,7 +148,6 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
         playingRef.current = false;
       };
 
-      audio.src = url;
       setIsPlaying(true);
       playingRef.current = true;
 

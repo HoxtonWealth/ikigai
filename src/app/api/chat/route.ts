@@ -9,6 +9,9 @@ function findSentenceBoundary(text: string): number {
       (text[i] === '.' || text[i] === '?' || text[i] === '!') &&
       (text[i + 1] === ' ' || text[i + 1] === '\n')
     ) {
+      // Skip short fragments to avoid splitting on abbreviations (e.g. "M. Dupont")
+      const before = text.slice(0, i + 1).trim();
+      if (before.length < 4) continue;
       return i + 1;
     }
   }
@@ -39,6 +42,8 @@ export async function POST(request: NextRequest) {
     const reader = streamRes.body!.getReader();
     const decoder = new TextDecoder();
     const encoder = new TextEncoder();
+
+    const sseEvent = (data: object) => encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
 
     const stream = new ReadableStream({
       async start(controller) {
@@ -80,33 +85,21 @@ export async function POST(request: NextRequest) {
               } else {
                 const sentence = unemitted.slice(0, boundary).trim();
                 if (sentence) {
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ sentence })}\n\n`)
-                  );
+                  controller.enqueue(sseEvent({ sentence }));
                 }
                 emittedUpTo += boundary;
               }
             }
           }
 
-          // Emit any remaining text
           const remaining = fullText.slice(emittedUpTo).trim();
           if (remaining) {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ sentence: remaining })}\n\n`)
-            );
+            controller.enqueue(sseEvent({ sentence: remaining }));
           }
 
-          // Signal completion with full text
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ done: true, full: fullText })}\n\n`)
-          );
+          controller.enqueue(sseEvent({ done: true, full: fullText }));
         } catch (err) {
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ error: String(err) })}\n\n`
-            )
-          );
+          controller.enqueue(sseEvent({ error: String(err) }));
         }
 
         controller.close();

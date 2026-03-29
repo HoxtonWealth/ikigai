@@ -45,16 +45,17 @@ async function readSSEStream(
         const data = line.slice(6).trim();
         if (!data) continue;
 
+        let parsed: SSEEvent;
         try {
-          const parsed: SSEEvent = JSON.parse(data);
-          if (parsed.error) throw new Error(parsed.error);
-          if (parsed.done) {
-            lastFullText = parsed.full;
-          } else if (parsed.sentence) {
-            onSentence(parsed.sentence);
-          }
+          parsed = JSON.parse(data);
         } catch {
           continue;
+        }
+        if (parsed.error) throw new Error(parsed.error);
+        if (parsed.done) {
+          lastFullText = parsed.full;
+        } else if (parsed.sentence) {
+          onSentence(parsed.sentence);
         }
       }
     }
