@@ -16,6 +16,53 @@ function getNextPhase(current: CoachingPhase): Phase {
   return 'synthesizing';
 }
 
+type SSEEvent =
+  | { sentence: string; done?: never; full?: never; error?: never }
+  | { done: true; full: string; sentence?: never; error?: never }
+  | { error: string; sentence?: never; done?: never; full?: never };
+
+async function readSSEStream(
+  response: Response,
+  onSentence: (sentence: string) => void,
+  onDone: (fullText: string) => void,
+) {
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let sseBuffer = '';
+  let lastFullText = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    sseBuffer += decoder.decode(value, { stream: true });
+    const events = sseBuffer.split('\n\n');
+    sseBuffer = events.pop() || '';
+
+    for (const event of events) {
+      for (const line of event.split('\n')) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (!data) continue;
+
+        try {
+          const parsed: SSEEvent = JSON.parse(data);
+          if (parsed.error) throw new Error(parsed.error);
+          if (parsed.done) {
+            lastFullText = parsed.full;
+          } else if (parsed.sentence) {
+            onSentence(parsed.sentence);
+          }
+        } catch {
+          continue;
+        }
+      }
+    }
+  }
+
+  onDone(lastFullText);
+}
+
 export function useCoachSession() {
   const [state, setState] = useState<SessionState>({
     phase: 'love',
@@ -34,7 +81,90 @@ export function useCoachSession() {
     setState((prev) => ({ ...prev, isCoachSpeaking: false }));
   }, []);
 
-  const { play: playAudio, stop: stopAudio, isPlaying, unlock: unlockAudio } = useAudioPlayer(onAudioEnded);
+  const { enqueue: enqueueAudio, stop: stopAudio, isPlaying, unlock: unlockAudio } = useAudioPlayer(onAudioEnded);
+
+  // Fire TTS for a sentence and enqueue audio when ready
+  const ttsSentence = useCallback(
+    async (sentence: string): Promise<ArrayBuffer | null> => {
+      try {
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: sentence }),
+        });
+        if (!res.ok) return null;
+        return res.arrayBuffer();
+      } catch {
+        return null;
+      }
+    },
+    []
+  );
+
+  // Stream a coaching response: display text progressively, TTS per sentence
+  const streamCoachResponse = useCallback(
+    async (
+      chatRes: Response,
+      updatedMessages: Message[],
+      shouldTransition: boolean,
+      nextPhase: Phase,
+      newPhaseCount: number,
+    ) => {
+      let displayedText = '';
+      let audioChain = Promise.resolve();
+
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+        isCoachSpeaking: true,
+      }));
+
+      let finalText = '';
+
+      await readSSEStream(
+        chatRes,
+        // onSentence — fire TTS immediately, update display
+        (sentence) => {
+          displayedText += (displayedText ? ' ' : '') + sentence;
+          const textSnapshot = displayedText;
+
+          setState((prev) => ({
+            ...prev,
+            messages: [
+              ...updatedMessages,
+              { role: 'assistant' as const, content: textSnapshot },
+            ],
+          }));
+
+          // Fire TTS now (runs in parallel), but enqueue in order via chain
+          const ttsPromise = ttsSentence(sentence);
+          audioChain = audioChain.then(async () => {
+            const audioData = await ttsPromise;
+            if (audioData) enqueueAudio(audioData);
+          });
+        },
+        // onDone
+        (fullText) => {
+          finalText = fullText || displayedText;
+        },
+      );
+
+      // Wait for all TTS to complete and enqueue
+      await audioChain;
+
+      // Final state with authoritative text + phase transition
+      setState((prev) => ({
+        ...prev,
+        messages: [
+          ...updatedMessages,
+          { role: 'assistant' as const, content: finalText },
+        ],
+        phase: shouldTransition ? nextPhase : prev.phase,
+        currentPhaseMessages: shouldTransition ? 0 : newPhaseCount,
+      }));
+    },
+    [ttsSentence, enqueueAudio]
+  );
 
   const sendMessage = useCallback(
     async (userText: string) => {
@@ -67,7 +197,6 @@ export function useCoachSession() {
       }));
 
       try {
-        // Call chat API
         const chatRes = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -79,10 +208,10 @@ export function useCoachSession() {
 
         if (!chatRes.ok) throw new Error('Chat API failed');
 
-        const { response } = await chatRes.json();
-
-        // Handle synthesis phase
+        // Synthesis: non-streaming JSON response
         if (phaseForApi === 'synthesis') {
+          const { response } = await chatRes.json();
+
           let synthesis: IkigaiSynthesis;
           try {
             synthesis = JSON.parse(response);
@@ -107,44 +236,14 @@ export function useCoachSession() {
           return;
         }
 
-        const assistantMessage: Message = { role: 'assistant', content: response };
-
-        // Update state with phase transition if needed
+        // Coaching: streaming SSE response
         const shouldTransition = newPhaseCount >= MESSAGES_PER_PHASE && nextPhase !== current.phase;
-        setState((prev) => ({
-          ...prev,
-          messages: [...updatedMessages, assistantMessage],
-          isLoading: false,
-          isCoachSpeaking: true,
-          phase: shouldTransition ? nextPhase : prev.phase,
-          currentPhaseMessages: shouldTransition ? 0 : newPhaseCount,
-        }));
-
-        // Play TTS
-        try {
-          const ttsRes = await fetch('/api/tts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: response }),
-          });
-
-          if (ttsRes.ok) {
-            const audioData = await ttsRes.arrayBuffer();
-            console.log('[CoachSession] TTS audio received, size:', audioData.byteLength);
-            await playAudio(audioData);
-          } else {
-            console.error('[CoachSession] TTS failed:', ttsRes.status, await ttsRes.text());
-            setState((prev) => ({ ...prev, isCoachSpeaking: false }));
-          }
-        } catch (err) {
-          console.error('[CoachSession] TTS error:', err);
-          setState((prev) => ({ ...prev, isCoachSpeaking: false }));
-        }
+        await streamCoachResponse(chatRes, updatedMessages, shouldTransition, nextPhase, newPhaseCount);
       } catch {
         setState((prev) => ({ ...prev, isLoading: false }));
       }
     },
-    [playAudio]
+    [streamCoachResponse]
   );
 
   const startSession = useCallback(async () => {
@@ -159,40 +258,12 @@ export function useCoachSession() {
 
       if (!chatRes.ok) throw new Error('Chat API failed');
 
-      const { response } = await chatRes.json();
-      const assistantMessage: Message = { role: 'assistant', content: response };
-
-      setState((prev) => ({
-        ...prev,
-        messages: [assistantMessage],
-        isLoading: false,
-        isCoachSpeaking: true,
-      }));
-
-      try {
-        const ttsRes = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: response }),
-        });
-
-        if (ttsRes.ok) {
-          const audioData = await ttsRes.arrayBuffer();
-          console.log('[CoachSession] Start TTS audio received, size:', audioData.byteLength);
-          await playAudio(audioData);
-        } else {
-          console.error('[CoachSession] Start TTS failed:', ttsRes.status, await ttsRes.text());
-          setState((prev) => ({ ...prev, isCoachSpeaking: false }));
-        }
-      } catch (err) {
-        console.error('[CoachSession] Start TTS error:', err);
-        setState((prev) => ({ ...prev, isCoachSpeaking: false }));
-      }
+      await streamCoachResponse(chatRes, [], false, 'love', 0);
     } catch (err) {
       console.error('[CoachSession] Start session error:', err);
       setState((prev) => ({ ...prev, isLoading: false }));
     }
-  }, [playAudio]);
+  }, [streamCoachResponse]);
 
   const setUserSpeaking = useCallback((speaking: boolean) => {
     setState((prev) => ({ ...prev, isUserSpeaking: speaking }));
