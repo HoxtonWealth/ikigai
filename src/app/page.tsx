@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 const CIRCLES = [
@@ -63,6 +64,16 @@ function IkigaiPreview() {
   );
 }
 
+function MicIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <line x1="12" y1="19" x2="12" y2="22" />
+    </svg>
+  );
+}
+
 const IKIGAI_CARDS = [
   {
     title: 'Ce que vous aimez',
@@ -101,7 +112,7 @@ const STEPS = [
   },
   {
     title: 'Vous r\u00e9pondez \u00e0 voix haute',
-    desc: 'Appuyez sur le micro, parlez naturellement. Vos mots sont transcrits automatiquement. Vous pouvez aussi taper.',
+    desc: 'Le micro s\u2019active automatiquement apr\u00e8s chaque question. Parlez naturellement, puis appuyez sur le bouton pour envoyer. Vous pouvez aussi taper.',
   },
   {
     title: 'Le coach s\u2019adapte \u00e0 vous',
@@ -116,35 +127,111 @@ const STEPS = [
 const WALKTHROUGH = [
   {
     title: 'Cliquez \u00ab Commencer \u00bb',
-    desc: 'Votre navigateur demandera l\u2019acc\u00e8s au micro. Acceptez pour la voix, refusez pour utiliser la saisie texte.',
+    desc: 'Votre navigateur demandera acc\u00e8s au micro \u2014 acceptez pour l\u2019exp\u00e9rience vocale, ou refusez pour taper vos r\u00e9ponses',
   },
   {
-    title: 'Appuyez \u00ab D\u00e9marrer la conversation \u00bb',
-    desc: 'Le coach se pr\u00e9sente et vous pose sa premi\u00e8re question.',
+    title: 'Le coach se pr\u00e9sente',
+    desc: 'Il vous accueille, vous explique la m\u00e9thode des 4 cercles et comment la session va se d\u00e9rouler',
   },
   {
-    title: 'Maintenez le bouton micro',
-    desc: 'Parlez tant que vous maintenez le bouton. Rel\u00e2chez pour envoyer votre r\u00e9ponse.',
+    title: 'Le micro s\u2019active tout seul',
+    desc: 'Apr\u00e8s chaque question du coach, le micro d\u00e9marre automatiquement. Parlez, puis appuyez sur le bouton rouge pour envoyer votre r\u00e9ponse',
   },
   {
     title: 'Laissez-vous guider',
-    desc: 'Le coach poursuit naturellement. La barre de progression indique dans quel cercle vous \u00eates.',
+    desc: 'Le coach encha\u00eene les questions naturellement. La barre en haut montre votre progression \u00e0 travers les 4 cercles',
   },
 ];
 
 export default function Home() {
   const router = useRouter();
+  const [showMicSetup, setShowMicSetup] = useState(false);
+  const [micGranted, setMicGranted] = useState(false);
+  const [micDenied, setMicDenied] = useState(false);
 
-  const handleBegin = async () => {
-    // Request mic permission before navigating
+  const handleRequestMic = useCallback(async () => {
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
+      setMicGranted(true);
+      setTimeout(() => router.push('/session'), 1000);
     } catch {
-      // User denied or no mic — text fallback will cover this
+      setMicDenied(true);
     }
-    router.push('/session');
-  };
+  }, [router]);
 
+  // State 2: Mic permission screen
+  if (showMicSetup) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center p-6 bg-[var(--background)]">
+        <div className="max-w-sm w-full text-center">
+          {micGranted ? (
+            <>
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                <svg className="w-10 h-10 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-semibold text-[#2D2A26] mb-2">
+                Micro activ&eacute; !
+              </h2>
+              <p className="text-sm text-[#6B6560]">Lancement de la session...</p>
+            </>
+          ) : (
+            <>
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-violet-100 flex items-center justify-center">
+                <MicIcon className="w-10 h-10 text-violet-500" />
+              </div>
+              <h2 className="text-2xl font-semibold text-[#2D2A26] mb-3">
+                Autoriser le microphone
+              </h2>
+              <p className="text-sm text-[#6B6560] leading-relaxed mb-8">
+                Pour que le coach puisse vous entendre, votre navigateur a besoin
+                d&apos;acc&eacute;der &agrave; votre micro.
+              </p>
+
+              <div className="space-y-3">
+                <button
+                  onClick={handleRequestMic}
+                  className="w-full px-6 py-4 rounded-full bg-violet-500 text-white text-base font-semibold hover:bg-violet-600 active:scale-95 transition-all shadow-lg shadow-violet-200"
+                >
+                  Autoriser le micro
+                </button>
+                <button
+                  onClick={() => router.push('/session')}
+                  className="w-full px-6 py-4 rounded-full border border-gray-200 text-[#6B6560] text-base font-medium hover:bg-gray-50 active:scale-95 transition-all"
+                >
+                  Continuer sans micro
+                </button>
+              </div>
+
+              {micDenied && (
+                <div className="mt-6 rounded-xl bg-amber-50 border border-amber-100 p-4">
+                  <p className="text-sm text-amber-800 leading-relaxed mb-3">
+                    Pas de souci ! Vous pourrez taper vos r&eacute;ponses &agrave; la place.
+                  </p>
+                  <button
+                    onClick={() => router.push('/session')}
+                    className="text-sm font-semibold text-violet-600 hover:text-violet-700"
+                  >
+                    Continuer avec le clavier &rarr;
+                  </button>
+                </div>
+              )}
+
+              <button
+                onClick={() => { setShowMicSetup(false); setMicDenied(false); }}
+                className="mt-6 text-sm text-[#8B8580] hover:text-[#6B6560]"
+              >
+                &larr; Retour
+              </button>
+            </>
+          )}
+        </div>
+      </main>
+    );
+  }
+
+  // State 1: Informational sections
   return (
     <main className="min-h-screen bg-[var(--background)]">
       <div className="max-w-md mx-auto px-6 sm:px-8">
@@ -245,7 +332,7 @@ export default function Home() {
         {/* Section 5: CTA */}
         <section className="border-t border-gray-100 py-10 text-center pb-16">
           <button
-            onClick={handleBegin}
+            onClick={() => setShowMicSetup(true)}
             className="px-8 py-4 rounded-full bg-violet-500 text-white text-lg font-semibold hover:bg-violet-600 active:scale-95 transition-all shadow-lg shadow-violet-200"
           >
             Commencer votre voyage

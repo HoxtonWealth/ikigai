@@ -153,22 +153,26 @@ export default function SessionPage() {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
         <div className="max-w-sm w-full mx-4 rounded-2xl bg-white p-6 shadow-xl text-center">
-          <div className="text-3xl mb-3">🎙️</div>
+          <svg className="w-8 h-8 mx-auto mb-3 text-violet-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+            <line x1="12" y1="19" x2="12" y2="22" />
+          </svg>
           <h3 className="text-lg font-semibold text-[#2D2A26] mb-4">
             Comment parler au coach
           </h3>
           <ul className="text-sm text-[#6B6560] text-left space-y-2 mb-6">
             <li className="flex gap-2">
               <span className="text-violet-500 flex-shrink-0">•</span>
-              Appuyez et maintenez le bouton micro pour parler
+              Le micro s&apos;active automatiquement apr&egrave;s chaque question du coach
             </li>
             <li className="flex gap-2">
               <span className="text-violet-500 flex-shrink-0">•</span>
-              Relâchez pour envoyer votre réponse
+              Parlez naturellement, puis appuyez sur le bouton rouge pour envoyer
             </li>
             <li className="flex gap-2">
               <span className="text-violet-500 flex-shrink-0">•</span>
-              Vous pouvez aussi taper dans le champ texte
+              Vous pouvez aussi taper dans le champ texte en bas
             </li>
           </ul>
           <button
