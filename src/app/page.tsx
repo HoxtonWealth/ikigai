@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { checkInAppBrowser, checkMediaDevicesAvailable, interpretMicError, MicErrorInfo } from './lib/micErrors';
 
 const CIRCLES = [
   { label: 'Ce que vous Aimez', color: '#F87171', x: 140, y: 100 },
@@ -147,15 +148,30 @@ export default function Home() {
   const router = useRouter();
   const [showMicSetup, setShowMicSetup] = useState(false);
   const [micGranted, setMicGranted] = useState(false);
-  const [micDenied, setMicDenied] = useState(false);
+  const [micError, setMicError] = useState<MicErrorInfo | null>(null);
+
+  // Detect in-app browser or missing mediaDevices on mount
+  useEffect(() => {
+    if (!showMicSetup) return;
+    const inApp = checkInAppBrowser();
+    if (inApp) {
+      setMicError(inApp);
+      return;
+    }
+    const noMedia = checkMediaDevicesAvailable();
+    if (noMedia) {
+      setMicError(noMedia);
+    }
+  }, [showMicSetup]);
 
   const handleRequestMic = useCallback(async () => {
+    setMicError(null);
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
       setMicGranted(true);
       setTimeout(() => router.push('/session'), 1000);
-    } catch {
-      setMicDenied(true);
+    } catch (err) {
+      setMicError(interpretMicError(err));
     }
   }, [router]);
 
@@ -192,7 +208,8 @@ export default function Home() {
               <div className="space-y-3">
                 <button
                   onClick={handleRequestMic}
-                  className="w-full px-6 py-4 rounded-full bg-violet-500 text-white text-base font-semibold hover:bg-violet-600 active:scale-95 transition-all shadow-lg shadow-violet-200"
+                  disabled={!!micError && !micError.canRetry}
+                  className="w-full px-6 py-4 rounded-full bg-violet-500 text-white text-base font-semibold hover:bg-violet-600 active:scale-95 transition-all shadow-lg shadow-violet-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Autoriser le micro
                 </button>
@@ -204,22 +221,42 @@ export default function Home() {
                 </button>
               </div>
 
-              {micDenied && (
-                <div className="mt-6 rounded-xl bg-amber-50 border border-amber-100 p-4">
-                  <p className="text-sm text-amber-800 leading-relaxed mb-3">
-                    Pas de souci ! Vous pourrez taper vos r&eacute;ponses &agrave; la place.
+              {micError && (
+                <div className="mt-6 rounded-xl bg-amber-50 border border-amber-100 p-4 text-left">
+                  <p className="text-sm font-semibold text-amber-900 mb-1">
+                    {micError.title}
                   </p>
-                  <button
-                    onClick={() => router.push('/session')}
-                    className="text-sm font-semibold text-violet-600 hover:text-violet-700"
-                  >
-                    Continuer avec le clavier &rarr;
-                  </button>
+                  <p className="text-sm text-amber-800 leading-relaxed mb-3">
+                    {micError.message}
+                  </p>
+                  {micError.steps && (
+                    <ol className="text-sm text-amber-800 leading-relaxed mb-3 list-decimal list-inside space-y-1">
+                      {micError.steps.map((step, i) => (
+                        <li key={i}>{step}</li>
+                      ))}
+                    </ol>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    {micError.canRetry && (
+                      <button
+                        onClick={handleRequestMic}
+                        className="text-sm font-semibold text-violet-600 hover:text-violet-700"
+                      >
+                        R&eacute;essayer le micro &rarr;
+                      </button>
+                    )}
+                    <button
+                      onClick={() => router.push('/session')}
+                      className="text-sm font-semibold text-[#6B6560] hover:text-[#4B4540]"
+                    >
+                      Continuer avec le clavier &rarr;
+                    </button>
+                  </div>
                 </div>
               )}
 
               <button
-                onClick={() => { setShowMicSetup(false); setMicDenied(false); }}
+                onClick={() => { setShowMicSetup(false); setMicError(null); }}
                 className="mt-6 text-sm text-[#8B8580] hover:text-[#6B6560]"
               >
                 &larr; Retour
