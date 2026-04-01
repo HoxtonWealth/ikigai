@@ -4,11 +4,20 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCoachSession } from '../hooks/useCoachSession';
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { loadSession, clearSavedSession, SavedSession } from '../lib/sessionPersistence';
 import { ProgressBar } from '../components/ProgressBar';
 import { CoachBubble } from '../components/CoachBubble';
 import { UserBubble } from '../components/UserBubble';
 import { VoiceRecorder } from '../components/VoiceRecorder';
 import { TranscriptDisplay } from '../components/TranscriptDisplay';
+
+// Map phase to user-friendly French labels
+const PHASE_LABELS: Record<string, string> = {
+  love: 'Ce que vous aimez',
+  good_at: 'Ce dans quoi vous excellez',
+  world_needs: 'Ce dont le monde a besoin',
+  paid_for: 'Ce pour quoi vous pouvez être payé(e)',
+};
 
 export default function SessionPage() {
   const router = useRouter();
@@ -18,8 +27,11 @@ export default function SessionPage() {
     isCoachSpeaking,
     isLoading,
     synthesis,
+    error,
     sendMessage,
     startSession,
+    resumeSession,
+    retry,
     setUserSpeaking,
     unlockAudio,
   } = useCoachSession();
@@ -40,14 +52,62 @@ export default function SessionPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wasCoachSpeaking = useRef(false);
 
-  // User clicks to start — unlock audio and begin API call immediately
-  // The onboarding tooltip covers the loading time
+  // Saved session for resume prompt
+  const [savedSession, setSavedSession] = useState<SavedSession | null>(null);
+  const [checkedStorage, setCheckedStorage] = useState(false);
+
+  // Mic watchdog state
+  const [showMicHint, setShowMicHint] = useState(false);
+  const micHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Check for saved session on mount
+  useEffect(() => {
+    setSavedSession(loadSession());
+    setCheckedStorage(true);
+  }, []);
+
+  // Mic watchdog — if listening but no transcript for 10s, show hint
+  useEffect(() => {
+    if (micHintTimerRef.current) {
+      clearTimeout(micHintTimerRef.current);
+      micHintTimerRef.current = null;
+    }
+    setShowMicHint(false);
+
+    if (isListening && !transcript) {
+      micHintTimerRef.current = setTimeout(() => {
+        setShowMicHint(true);
+      }, 10000);
+    }
+
+    return () => {
+      if (micHintTimerRef.current) clearTimeout(micHintTimerRef.current);
+    };
+  }, [isListening, transcript]);
+
   const handleStart = useCallback(() => {
     unlockAudio();
     setHasStarted(true);
+    setSavedSession(null);
     setShowOnboarding(true);
     startSession();
   }, [unlockAudio, startSession]);
+
+  // Resume handler
+  const handleResume = useCallback(() => {
+    if (!savedSession) return;
+    unlockAudio();
+    setHasStarted(true);
+    const toResume = savedSession;
+    setSavedSession(null);
+    resumeSession(toResume);
+  }, [savedSession, unlockAudio, resumeSession]);
+
+  // Fresh start from resume screen
+  const handleFreshStart = useCallback(() => {
+    clearSavedSession();
+    setSavedSession(null);
+  }, []);
 
   const handleDismissOnboarding = useCallback(() => {
     setShowOnboarding(false);
@@ -56,12 +116,11 @@ export default function SessionPage() {
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, error]);
 
   // Auto-activate mic when coach finishes speaking
   useEffect(() => {
     if (wasCoachSpeaking.current && !isCoachSpeaking && !isLoading && isSupported) {
-      // Coach just finished speaking — auto-start mic for user's turn
       const timer = setTimeout(() => {
         resetTranscript();
         startListening();
@@ -75,7 +134,6 @@ export default function SessionPage() {
   // Navigate to results when synthesis is ready
   useEffect(() => {
     if (phase === 'results' && synthesis) {
-      // Stop mic if it's on
       if (isListening) stopListening();
       const timer = setTimeout(() => {
         sessionStorage.setItem('ikigai-synthesis', JSON.stringify(synthesis));
@@ -85,11 +143,9 @@ export default function SessionPage() {
     }
   }, [phase, synthesis, router, isListening, stopListening]);
 
-  // When user clicks stop — use ref to get latest transcript (no stale closure)
   const handleStopRecording = useCallback(() => {
     stopListening();
     setUserSpeaking(false);
-    // Small delay to let final transcript settle
     setTimeout(() => {
       const finalText = (transcriptRef.current ?? '').trim();
       if (finalText) {
@@ -110,7 +166,6 @@ export default function SessionPage() {
       e.preventDefault();
       const text = textInput.trim();
       if (!text) return;
-      // If mic is on, stop it — user chose to type instead
       if (isListening) {
         stopListening();
         setUserSpeaking(false);
@@ -124,7 +179,47 @@ export default function SessionPage() {
 
   const micDisabled = isCoachSpeaking || isLoading;
 
-  // Pre-start screen — user gesture unlocks audio playback
+  // Don't render until we've checked sessionStorage (prevents flash)
+  if (!checkedStorage) return null;
+
+  // Resume screen — shown when saved session exists and user hasn't started
+  if (!hasStarted && savedSession) {
+    const phaseLabel = PHASE_LABELS[savedSession.phase] || savedSession.phase;
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-[var(--background)]">
+        <div className="text-center max-w-sm">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-violet-100 flex items-center justify-center text-3xl">
+            🧘
+          </div>
+          <h2 className="text-2xl font-semibold text-[#2D2A26] mb-3">
+            Vous aviez une session en cours
+          </h2>
+          <p className="text-gray-500 mb-2 leading-relaxed">
+            Vous en étiez à &laquo;&nbsp;{phaseLabel}&nbsp;&raquo;.
+          </p>
+          <p className="text-sm text-[#8B8580] mb-8">
+            Vos réponses sont sauvegardées sur votre appareil.
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleResume}
+              className="px-8 py-4 rounded-full bg-violet-500 text-white text-lg font-semibold hover:bg-violet-600 active:scale-95 transition-all shadow-lg shadow-violet-200"
+            >
+              Reprendre
+            </button>
+            <button
+              onClick={handleFreshStart}
+              className="px-8 py-3 rounded-full text-gray-500 text-sm hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              Recommencer à zéro
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Pre-start screen
   if (!hasStarted) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-[var(--background)]">
@@ -149,7 +244,7 @@ export default function SessionPage() {
     );
   }
 
-  // Onboarding tooltip — shown once after "Démarrer la conversation"
+  // Onboarding tooltip
   if (showOnboarding) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -164,15 +259,15 @@ export default function SessionPage() {
           </h3>
           <ul className="text-sm text-[#6B6560] text-left space-y-2 mb-6">
             <li className="flex gap-2">
-              <span className="text-violet-500 flex-shrink-0">•</span>
+              <span className="text-violet-500 flex-shrink-0">&bull;</span>
               Le micro s&apos;active automatiquement apr&egrave;s chaque question du coach
             </li>
             <li className="flex gap-2">
-              <span className="text-violet-500 flex-shrink-0">•</span>
+              <span className="text-violet-500 flex-shrink-0">&bull;</span>
               Parlez naturellement, puis appuyez sur le bouton rouge pour envoyer
             </li>
             <li className="flex gap-2">
-              <span className="text-violet-500 flex-shrink-0">•</span>
+              <span className="text-violet-500 flex-shrink-0">&bull;</span>
               Vous pouvez aussi taper dans le champ texte en bas
             </li>
           </ul>
@@ -187,7 +282,7 @@ export default function SessionPage() {
     );
   }
 
-  // Synthesizing screen
+  // Synthesizing screen — with error fallback
   if (phase === 'synthesizing' || (phase === 'results' && synthesis)) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-[var(--background)]">
@@ -195,15 +290,34 @@ export default function SessionPage() {
           <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-violet-100 flex items-center justify-center animate-pulse">
             🧘
           </div>
-          <h2 className="text-2xl font-semibold text-[#2D2A26] mb-3">
-            Réflexion sur tout ce que vous avez partagé...
-          </h2>
-          <p className="text-gray-500">Découverte des connexions entre vos passions, compétences et raison d&apos;être</p>
-          <div className="mt-8 flex justify-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '300ms' }} />
-          </div>
+          {error === 'synthesis' ? (
+            <>
+              <h2 className="text-xl font-semibold text-[#2D2A26] mb-3">
+                La synthèse prend plus de temps que prévu
+              </h2>
+              <p className="text-gray-500 mb-6">
+                Vos réponses sont sauvegardées sur votre appareil, rien n&apos;est perdu.
+              </p>
+              <button
+                onClick={retry}
+                className="px-6 py-3 rounded-full bg-violet-500 text-white font-semibold hover:bg-violet-600 active:scale-95 transition-all"
+              >
+                Réessayer
+              </button>
+            </>
+          ) : (
+            <>
+              <h2 className="text-2xl font-semibold text-[#2D2A26] mb-3">
+                Réflexion sur tout ce que vous avez partagé...
+              </h2>
+              <p className="text-gray-500">Découverte des connexions entre vos passions, compétences et raison d&apos;être</p>
+              <div className="mt-8 flex justify-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
@@ -221,7 +335,7 @@ export default function SessionPage() {
       {/* Messages area */}
       <main className="flex-1 overflow-y-auto px-4 py-6">
         <div className="max-w-2xl mx-auto">
-          {/* First-message loading: prominent centered state */}
+          {/* First-message loading */}
           {messages.length === 0 && isLoading && (
             <div className="flex flex-col items-center justify-center py-20 text-center">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-violet-100 flex items-center justify-center animate-pulse text-2xl">
@@ -239,6 +353,25 @@ export default function SessionPage() {
             </div>
           )}
 
+          {/* First-message error */}
+          {messages.length === 0 && !isLoading && error && (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-violet-100 flex items-center justify-center text-2xl">
+                🧘
+              </div>
+              <p className="text-base font-medium text-[#2D2A26] mb-1">
+                Un petit souci de connexion
+              </p>
+              <p className="text-sm text-[#8B8580] mb-4">Impossible de joindre le coach pour le moment.</p>
+              <button
+                onClick={retry}
+                className="px-6 py-3 rounded-full bg-violet-500 text-white font-semibold hover:bg-violet-600 active:scale-95 transition-all"
+              >
+                Réessayer
+              </button>
+            </div>
+          )}
+
           {messages.map((msg, i) =>
             msg.role === 'assistant' ? (
               <CoachBubble
@@ -251,7 +384,8 @@ export default function SessionPage() {
             ) : null
           )}
 
-          {messages.length > 0 && isLoading && (
+          {/* Loading indicator (no error) */}
+          {messages.length > 0 && isLoading && !error && (
             <div className="flex justify-start mb-4">
               <div className="flex items-start gap-2">
                 <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0 text-sm">
@@ -268,6 +402,31 @@ export default function SessionPage() {
             </div>
           )}
 
+          {/* Inline error banner — replaces loading dots */}
+          {messages.length > 0 && error === 'chat' && !isLoading && (
+            <div className="flex justify-start mb-4">
+              <div className="flex items-start gap-2">
+                <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center flex-shrink-0 text-sm">
+                  🧘
+                </div>
+                <div className="rounded-2xl rounded-tl-sm px-4 py-4 bg-white shadow-sm border border-amber-200">
+                  <p className="text-sm font-medium text-[#2D2A26] mb-1">
+                    Un petit souci de connexion.
+                  </p>
+                  <p className="text-xs text-[#8B8580] mb-3">
+                    Vos réponses sont sauvegardées sur votre appareil, rien n&apos;est perdu.
+                  </p>
+                  <button
+                    onClick={retry}
+                    className="px-4 py-2 rounded-full bg-violet-500 text-white text-sm font-medium hover:bg-violet-600 active:scale-95 transition-all"
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div ref={messagesEndRef} />
         </div>
       </main>
@@ -278,8 +437,14 @@ export default function SessionPage() {
           {/* Live transcript */}
           {isListening && <TranscriptDisplay text={transcript} />}
 
+          {/* Mic watchdog hint */}
+          {showMicHint && isListening && (
+            <p className="text-xs text-amber-600 text-center mb-2">
+              Le micro ne capte rien — essayez de parler plus fort ou tapez votre réponse ci-dessous
+            </p>
+          )}
+
           <div className="flex items-center gap-3">
-            {/* Text input (always visible — serves as fallback) */}
             <form onSubmit={handleTextSubmit} className="flex-1 flex gap-2">
               <input
                 type="text"
@@ -304,7 +469,6 @@ export default function SessionPage() {
               </button>
             </form>
 
-            {/* Mic button (hidden if unsupported) */}
             <VoiceRecorder
               isListening={isListening}
               isSupported={isSupported}

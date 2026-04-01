@@ -20,6 +20,7 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
   const playingRef = useRef(false);
   // Sealed = no more audio will be enqueued. Only fire onEnded when sealed + queue empty.
   const sealedRef = useRef(false);
+  const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   onEndedRef.current = onEnded;
 
   // Create a persistent audio element once
@@ -32,6 +33,7 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
       audio.pause();
       audio.src = '';
       if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+      if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
     };
   }, []);
 
@@ -73,6 +75,12 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
   // Play next chunk from queue, or fire onEnded when sealed + empty
   const playNextRef = useRef<() => void>();
   playNextRef.current = () => {
+    // Clear any existing safety timer
+    if (safetyTimerRef.current) {
+      clearTimeout(safetyTimerRef.current);
+      safetyTimerRef.current = null;
+    }
+
     const next = queueRef.current.shift();
     if (!next) {
       setIsPlaying(false);
@@ -91,10 +99,18 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
     loadAudio(audio, next);
 
     audio.onended = () => {
+      if (safetyTimerRef.current) {
+        clearTimeout(safetyTimerRef.current);
+        safetyTimerRef.current = null;
+      }
       playingRef.current = false;
       playNextRef.current?.();
     };
     audio.onerror = () => {
+      if (safetyTimerRef.current) {
+        clearTimeout(safetyTimerRef.current);
+        safetyTimerRef.current = null;
+      }
       playingRef.current = false;
       playNextRef.current?.();
     };
@@ -102,7 +118,21 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
     playingRef.current = true;
     setIsPlaying(true);
 
+    // Safety timeout: if this chunk hasn't ended in 30s, force-advance
+    safetyTimerRef.current = setTimeout(() => {
+      safetyTimerRef.current = null;
+      if (playingRef.current) {
+        audio.pause();
+        playingRef.current = false;
+        playNextRef.current?.();
+      }
+    }, 30000);
+
     audio.play().catch(() => {
+      if (safetyTimerRef.current) {
+        clearTimeout(safetyTimerRef.current);
+        safetyTimerRef.current = null;
+      }
       playingRef.current = false;
       playNextRef.current?.();
     });
@@ -163,6 +193,10 @@ export function useAudioPlayer(onEnded?: () => void): UseAudioPlayerReturn {
   );
 
   const stop = useCallback(() => {
+    if (safetyTimerRef.current) {
+      clearTimeout(safetyTimerRef.current);
+      safetyTimerRef.current = null;
+    }
     queueRef.current = [];
     sealedRef.current = false;
     const audio = audioRef.current;

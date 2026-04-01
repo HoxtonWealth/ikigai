@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { IkigaiSynthesis } from '../lib/types';
 import { IkigaiDiagram } from '../components/IkigaiDiagram';
+import { clearSavedSession } from '../lib/sessionPersistence';
 
 export default function ResultsPage() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function ResultsPage() {
 
   const handleStartOver = () => {
     sessionStorage.removeItem('ikigai-synthesis');
+    clearSavedSession();
     router.push('/');
   };
 

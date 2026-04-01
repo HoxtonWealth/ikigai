@@ -22,6 +22,7 @@ export type SessionState = {
   isUserSpeaking: boolean;
   isLoading: boolean;
   synthesis: IkigaiSynthesis | null;
+  error: 'chat' | 'synthesis' | null;
 };
 
 export type IkigaiSynthesis = {
