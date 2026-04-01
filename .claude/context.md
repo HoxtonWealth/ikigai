@@ -6,6 +6,7 @@
 - **OpenRouter** — REST API, model: `anthropic/claude-sonnet-4`
 - **ElevenLabs** — REST API, model: `eleven_multilingual_v2`
 - **Web Speech API** — browser native, `webkitSpeechRecognition`
+- **html2canvas** — client-side DOM-to-PNG for shareable Ikigai card
 
 ## Code Conventions
 - All components in `src/app/components/` — PascalCase filenames
@@ -35,3 +36,17 @@ Phases: welcome → love → good_at → world_needs → paid_for → synthesizi
 - Each coaching phase gets ~5 message exchanges
 - Frontend counts messages per phase and transitions
 - System prompt changes per phase (see `lib/prompts.ts`)
+
+## Session Resilience
+- **Auto-retry**: `fetchWithRetry` (lib/fetchWithRetry.ts) retries API calls on 500/502/503/504 with exponential backoff
+- **Persistence**: conversation saved to `sessionStorage` after every exchange (lib/sessionPersistence.ts)
+- **Resume**: if saved session found on `/session` load, shows "Reprendre" / "Recommencer" prompt
+- **Error UI**: inline error banners replace loading dots on failure, with "Réessayer" button
+- **Audio safety**: 30s timeout in useAudioPlayer auto-advances stuck chunks
+- **Mic watchdog**: 10s hint if speech recognition captures nothing
+- **Vercel timeout**: `vercel.json` sets `maxDuration: 60` for API routes
+
+## Share Feature
+- Results page has "Partager mon Ikigai" button
+- `ShareableCard` component renders 1080x1350 off-screen card (HTML/CSS circles, not SVG — better html2canvas compat)
+- html2canvas converts to PNG at 2x scale, then Web Share API (mobile) or download fallback (desktop)
