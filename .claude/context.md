@@ -46,6 +46,14 @@ Phases: welcome → love → good_at → world_needs → paid_for → synthesizi
 - **Mic watchdog**: 10s hint if speech recognition captures nothing
 - **Vercel timeout**: `vercel.json` sets `maxDuration: 60` for API routes
 
+## Mic Permission Handling
+- `lib/micErrors.ts` detects browser/device and returns specific French guidance
+- Detects in-app browsers (Instagram, Facebook, TikTok, LinkedIn, Snapchat, X) — shows "open in Safari/Chrome" steps
+- Detects missing `navigator.mediaDevices` — suggests correct browser
+- Interprets `getUserMedia` errors per browser: iOS Safari, iOS Chrome, Android Chrome, Desktop Chrome/Safari/Firefox
+- Each error includes: title, message, step-by-step fix instructions (when applicable), retry flag
+- Welcome page (`page.tsx`) shows error info inline with "Réessayer le micro" + "Continuer avec le clavier" options
+
 ## Share Feature
 - Results page has "Partager mon Ikigai" button
 - `ShareableCard` component renders 1080x1350 off-screen card (HTML/CSS circles, not SVG — better html2canvas compat)

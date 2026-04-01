@@ -41,6 +41,7 @@
 - [x] Phase transition context — good_at, world_needs, paid_for prompts explain the new circle when transitioning
 - [x] Session resilience — auto-retry, sessionStorage persistence, resume screen, error banners, audio stuck detection, mic watchdog
 - [x] Share feature — "Partager mon Ikigai" button generates PNG card (1080x1350) with diagram + statement, Web Share API / download fallback
+- [x] Mic permission errors — browser/device-specific French guidance for in-app browsers, blocked permissions, missing hardware, etc.
 
 ## Blockers
 None
