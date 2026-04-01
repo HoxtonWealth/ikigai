@@ -39,6 +39,8 @@
 - [x] Onboarding tooltip on /session — one-time overlay with SVG mic icon and updated instructions
 - [x] Coach self-introduction — love prompt introduces itself and explains 4-circle method on first message
 - [x] Phase transition context — good_at, world_needs, paid_for prompts explain the new circle when transitioning
+- [x] Session resilience — auto-retry, sessionStorage persistence, resume screen, error banners, audio stuck detection, mic watchdog
+- [x] Share feature — "Partager mon Ikigai" button generates PNG card (1080x1350) with diagram + statement, Web Share API / download fallback
 
 ## Blockers
 None

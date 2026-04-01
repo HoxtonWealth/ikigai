@@ -18,3 +18,8 @@
 - Must check typeof window !== 'undefined' (SSR safety)
 - continuous: false for single utterance capture
 - Not supported in Firefox — text fallback required
+
+## html2canvas
+- Used for generating shareable PNG from the off-screen ShareableCard component
+- Use HTML/CSS circles (not SVG) for best compatibility — html2canvas can be finicky with SVGs
+- scale: 2 for crisp output on retina displays

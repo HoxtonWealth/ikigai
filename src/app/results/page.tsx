@@ -1,14 +1,18 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import html2canvas from 'html2canvas';
 import { IkigaiSynthesis } from '../lib/types';
 import { IkigaiDiagram } from '../components/IkigaiDiagram';
+import { ShareableCard } from '../components/ShareableCard';
 import { clearSavedSession } from '../lib/sessionPersistence';
 
 export default function ResultsPage() {
   const router = useRouter();
   const [synthesis, setSynthesis] = useState<IkigaiSynthesis | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('ikigai-synthesis');
@@ -29,6 +33,45 @@ export default function ResultsPage() {
     router.push('/');
   };
 
+  const handleShare = useCallback(async () => {
+    if (!cardRef.current) return;
+    setIsGenerating(true);
+
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: null,
+      });
+
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, 'image/png')
+      );
+      if (!blob) return;
+
+      const file = new File([blob], 'mon-ikigai.png', { type: 'image/png' });
+
+      // Try native share if available and supports files
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file] });
+      } else {
+        // Fallback: download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mon-ikigai.png';
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (err) {
+      // User cancelled share sheet — not an error
+      if (err instanceof Error && err.name === 'AbortError') return;
+      console.error('[Share] Failed:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, []);
+
   if (!synthesis) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -39,6 +82,9 @@ export default function ResultsPage() {
 
   return (
     <main className="min-h-screen bg-[var(--background)] py-8 px-4">
+      {/* Off-screen card for html2canvas */}
+      <ShareableCard ref={cardRef} synthesis={synthesis} />
+
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl sm:text-3xl font-bold text-center text-[#2D2A26] mb-2">
           Votre Ikigai
@@ -87,11 +133,38 @@ export default function ResultsPage() {
           ))}
         </div>
 
+        {/* Share button */}
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={handleShare}
+            disabled={isGenerating}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-violet-600 text-white font-semibold hover:bg-violet-700 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto justify-center"
+          >
+            {isGenerating ? (
+              <>
+                <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeDasharray="31.4 31.4" />
+                </svg>
+                Création de l&apos;image...
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                  <polyline points="16 6 12 2 8 6" />
+                  <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                Partager mon Ikigai
+              </>
+            )}
+          </button>
+        </div>
+
         {/* Actions */}
-        <div className="mt-10 text-center pb-8">
+        <div className="mt-6 text-center pb-8">
           <button
             onClick={handleStartOver}
-            className="px-8 py-3 rounded-full bg-violet-500 text-white font-semibold hover:bg-violet-600 active:scale-95 transition-all"
+            className="px-8 py-3 rounded-full text-gray-500 text-sm hover:text-gray-700 hover:bg-gray-100 transition-colors"
           >
             Recommencer
           </button>
