@@ -22,8 +22,11 @@ export async function textToSpeech(text: string): Promise<ArrayBuffer> {
   );
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(`Gradium API error: ${response.status} - ${error.error}`);
+    const errorText = await response.text();
+    console.error('[TTS] Gradium error:', response.status, errorText);
+    let message = errorText;
+    try { message = JSON.parse(errorText).error || errorText; } catch {}
+    throw new Error(`Gradium API error: ${response.status} - ${message}`);
   }
 
   return response.arrayBuffer();
