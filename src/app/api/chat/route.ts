@@ -50,12 +50,23 @@ export async function POST(request: NextRequest) {
         let sseBuffer = '';
         let fullText = '';
         let emittedUpTo = 0;
+        let staleTimer: ReturnType<typeof setTimeout> | undefined;
+
+        const resetStaleTimer = () => {
+          if (staleTimer) clearTimeout(staleTimer);
+          // If no data arrives for 15s, the upstream model likely stalled.
+          // Cancel the reader so we can send what we have instead of hanging
+          // until Vercel's 60s hard kill produces an unrecoverable 504.
+          staleTimer = setTimeout(() => reader.cancel(), 15000);
+        };
 
         try {
+          resetStaleTimer();
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
+            resetStaleTimer();
             sseBuffer += decoder.decode(value, { stream: true });
 
             const lines = sseBuffer.split('\n');
@@ -91,17 +102,20 @@ export async function POST(request: NextRequest) {
               }
             }
           }
-
-          const remaining = fullText.slice(emittedUpTo).trim();
-          if (remaining) {
-            controller.enqueue(sseEvent({ sentence: remaining }));
-          }
-
-          controller.enqueue(sseEvent({ done: true, full: fullText }));
-        } catch (err) {
-          controller.enqueue(sseEvent({ error: String(err) }));
+        } catch {
+          // Stream aborted (stale timeout or network error) — fall through
+          // to emit whatever we accumulated.
+        } finally {
+          if (staleTimer) clearTimeout(staleTimer);
         }
 
+        // Emit any remaining text (complete response or partial from stale abort)
+        const remaining = fullText.slice(emittedUpTo).trim();
+        if (remaining) {
+          controller.enqueue(sseEvent({ sentence: remaining }));
+        }
+
+        controller.enqueue(sseEvent({ done: true, full: fullText }));
         controller.close();
       },
     });

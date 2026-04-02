@@ -11,24 +11,35 @@ const HEADERS = {
 };
 
 async function openRouterFetch(messages: Message[], stream: boolean, maxTokens: number = 400): Promise<Response> {
-  const response = await fetch(OPENROUTER_API_URL, {
-    method: 'POST',
-    headers: HEADERS,
-    body: JSON.stringify({
-      model: MODEL,
-      messages,
-      max_tokens: maxTokens,
-      frequency_penalty: 0.3,
-      ...(stream && { stream: true }),
-    }),
-  });
+  // For non-streaming (synthesis): abort 10s before Vercel's 60s hard kill
+  // so we can return a clean error the client can retry.
+  // For streaming: no fetch-level timeout — stale detection happens in route.ts.
+  const controller = stream ? undefined : new AbortController();
+  const timeout = controller ? setTimeout(() => controller.abort(), 50000) : undefined;
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+  try {
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers: HEADERS,
+      body: JSON.stringify({
+        model: MODEL,
+        messages,
+        max_tokens: maxTokens,
+        frequency_penalty: 0.3,
+        ...(stream && { stream: true }),
+      }),
+      ...(controller && { signal: controller.signal }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`OpenRouter API error: ${response.status} - ${error}`);
+    }
+
+    return response;
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
-
-  return response;
 }
 
 export async function chatCompletion(messages: Message[]): Promise<string> {
