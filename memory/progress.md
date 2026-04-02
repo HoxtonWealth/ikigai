@@ -45,6 +45,7 @@
 - [x] Talents vs Skills split — good_at prompt now distinguishes innate talents from acquired skills (prompts.ts)
 - [x] Richer synthesis with suggestions — synthesis prompt returns careers, projects, experiences; optional type in types.ts; "Pistes à explorer" section on results page with graceful fallback
 - [x] Reflection warm-up — 4 reflection cards on welcome page between "Vos premiers pas" and CTA to help users think before the session
+- [x] Gradium TTS — replaced ElevenLabs with Gradium (gradium.ts, route.ts Content-Type → audio/wav, all docs updated)
 
 ## Bug Fix Batch (2026-04-02) — 9 fixes from production log analysis
 - [x] TTS rate limiting — semaphore caps concurrent ElevenLabs calls to 2 (useCoachSession.ts)

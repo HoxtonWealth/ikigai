@@ -4,7 +4,7 @@
 - **Next.js 14** — App Router, TypeScript, server components by default
 - **Tailwind CSS 4** — utility classes, no CSS modules
 - **OpenRouter** — REST API, model: `anthropic/claude-sonnet-4`
-- **ElevenLabs** — REST API, model: `eleven_multilingual_v2`
+- **Gradium** — REST API (POST), EU endpoint, output: wav
 - **Web Speech API** — browser native, `webkitSpeechRecognition`
 - **html2canvas** — client-side DOM-to-PNG for shareable Ikigai card
 
@@ -18,13 +18,13 @@
 
 ## API Key Safety
 - `OPENROUTER_API_KEY` — server-side only, accessed in `/api/chat/route.ts`
-- `ELEVENLABS_API_KEY` — server-side only, accessed in `/api/tts/route.ts`
-- `ELEVENLABS_VOICE_ID` — server-side only
+- `GRADIUM_API_KEY` — server-side only, accessed in `/api/tts/route.ts`
+- `GRADIUM_VOICE_ID` — server-side only
 - Only `NEXT_PUBLIC_*` vars are visible client-side — we use NONE
 
 ## Voice Interaction Pattern
 1. Coach response arrives as text from `/api/chat`
-2. Text sent to `/api/tts` → returns audio blob
+2. Text sent to `/api/tts` → returns audio blob (wav)
 3. Audio plays via `<audio>` element
 4. On audio end → enable mic
 5. User speaks → `webkitSpeechRecognition` → text

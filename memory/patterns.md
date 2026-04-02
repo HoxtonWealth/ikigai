@@ -4,7 +4,7 @@
 Each phase prompt (except `love` and `synthesis`) includes a "Cross-reference their earlier answers" instruction block. This tells the AI to reference specific things the user said in prior circles. The pattern: place the instruction BEFORE the "Ask about" list so it frames how the AI should approach those questions.
 
 ## TTS concurrency semaphore
-`useCoachSession.ts` creates a fresh semaphore (`createSemaphore(MAX_TTS_CONCURRENT)`) per coach response. TTS fetches acquire a slot before calling ElevenLabs, release when done. Audio playback is still serialized via `audioChain`. This decouples fetch concurrency from playback order.
+`useCoachSession.ts` creates a fresh semaphore (`createSemaphore(MAX_TTS_CONCURRENT)`) per coach response. TTS fetches acquire a slot before calling Gradium, release when done. Audio playback is still serialized via `audioChain`. This decouples fetch concurrency from playback order.
 
 ## Input mode tracking (voice vs text)
 `session/page.tsx` tracks `inputMode: 'voice' | 'text'`. Voice mode: mic auto-activates after coach speaks. Text mode: no auto-activation, user must click mic to switch back. Mode switches: text field focus → text mode (transfers transcript), mic click → voice mode (clears text field). "Last gesture wins."

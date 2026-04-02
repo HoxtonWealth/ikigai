@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { textToSpeech } from '@/app/lib/elevenlabs';
+import { textToSpeech } from '@/app/lib/gradium';
 
 export async function POST(request: NextRequest) {
   try {
@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
 
     return new NextResponse(audioBuffer, {
       headers: {
-        'Content-Type': 'audio/mpeg',
+        'Content-Type': 'audio/wav',
       },
     });
   } catch (error) {

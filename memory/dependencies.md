@@ -6,13 +6,21 @@
 - Required headers: HTTP-Referer, X-Title
 - Model: anthropic/claude-sonnet-4
 
-## ElevenLabs
-- Endpoint: https://api.elevenlabs.io/v1/text-to-speech/{voice_id}
-- Auth: xi-api-key header
-- Returns: audio/mpeg stream
-- Model: eleven_multilingual_v2
-- Free tier: 10,000 characters/month
-- Rate limit: ~2-3 concurrent requests max — use semaphore to cap concurrency
+## Gradium
+- Endpoint: https://eu.api.gradium.ai/api/post/speech/tts (POST)
+- Alt endpoint: https://us.api.gradium.ai/api/post/speech/tts (US)
+- Auth: x-api-key header (NOT Authorization Bearer)
+- Content-Type: application/json
+- Body: { text, voice_id, output_format: "wav", only_audio: true }
+- Returns: raw audio/wav bytes when only_audio is true
+- Error format: { error: string, code: number }
+- Free tier: 45,000 credits/month (1 char = 1 credit)
+- Pricing: XS $13/mo (225k credits), S $43/mo (900k credits)
+- French voices: 43 available (40 France + 3 Canadian)
+- Voice cloning: instant from 10s audio (5 clones on free, 1000 on paid)
+- Max session duration: 300 seconds per API call
+- Supports pause tags: <break time="1.5s" /> in text
+- French text rewriting rules available (dates, times)
 
 ## OpenRouter — LLM guardrails
 - Always set `max_tokens` (400 coaching, 2000 synthesis) to prevent runaway generation

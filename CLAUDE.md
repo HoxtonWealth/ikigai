@@ -1,7 +1,7 @@
 # Project: Ikigai Coach
 
 ## Architecture
-Voice-first AI coaching app. Next.js 14 (App Router) on Vercel. OpenRouter for AI chat, ElevenLabs for TTS, Web Speech API for STT. No database, no auth. Tailwind CSS for styling.
+Voice-first AI coaching app. Next.js 14 (App Router) on Vercel. OpenRouter for AI chat, Gradium for TTS, Web Speech API for STT. No database, no auth. Tailwind CSS for styling.
 
 ## BMAD Artifacts
 - Architecture: _bmad-output/planning-artifacts/architecture.md
@@ -17,7 +17,7 @@ Voice-first AI coaching app. Next.js 14 (App Router) on Vercel. OpenRouter for A
 ## Absolute Rules
 - NEVER add a database or auth — this is a stateless one-session app
 - NEVER expose API keys client-side — all external API calls go through /api/ routes
-- NEVER change the tech stack (Next.js, OpenRouter, ElevenLabs, Tailwind)
+- NEVER change the tech stack (Next.js, OpenRouter, Gradium, Tailwind)
 - ALWAYS use App Router (not Pages Router)
 - ALWAYS provide a text input fallback for browsers without Web Speech API
 - ALWAYS ask ONE question at a time in the AI coach prompts
