@@ -42,6 +42,20 @@
 - [x] Session resilience — auto-retry, sessionStorage persistence, resume screen, error banners, audio stuck detection, mic watchdog
 - [x] Share feature — "Partager mon Ikigai" button generates PNG card (1080x1350) with diagram + statement, Web Share API / download fallback
 - [x] Mic permission errors — browser/device-specific French guidance for in-app browsers, blocked permissions, missing hardware, etc.
+- [x] Talents vs Skills split — good_at prompt now distinguishes innate talents from acquired skills (prompts.ts)
+- [x] Richer synthesis with suggestions — synthesis prompt returns careers, projects, experiences; optional type in types.ts; "Pistes à explorer" section on results page with graceful fallback
+- [x] Reflection warm-up — 4 reflection cards on welcome page between "Vos premiers pas" and CTA to help users think before the session
+
+## Bug Fix Batch (2026-04-02) — 9 fixes from production log analysis
+- [x] TTS rate limiting — semaphore caps concurrent ElevenLabs calls to 2 (useCoachSession.ts)
+- [x] AI repetition loop — max_tokens: 400/2000 + frequency_penalty: 0.3 (openrouter.ts)
+- [x] First message too long — stricter prompt: "3 phrases MAXIMUM" (prompts.ts)
+- [x] Chat 504 timeout UX — 45s AbortController for streaming, no retries (useCoachSession.ts)
+- [x] Synthesis JSON parse failure — tryExtractJSON, localStorage backup, raw text fallback (results/page.tsx)
+- [x] Synthesis lost on close/refresh — save during synthesizing, localStorage backup, beforeunload warning, recovery screen (sessionPersistence.ts + session/page.tsx + useCoachSession.ts)
+- [x] Mic auto-activates while typing — inputMode tracking, voice/text mode switching (session/page.tsx)
+- [x] Orphaned text on mode switch — mic click clears text, text focus transfers transcript (session/page.tsx)
+- [x] Transcript lost on speech silence restart — accumulatedRef preserves text across auto-restarts (useSpeechRecognition.ts)
 
 ## Blockers
 None

@@ -6,7 +6,32 @@ import html2canvas from 'html2canvas';
 import { IkigaiSynthesis } from '../lib/types';
 import { IkigaiDiagram } from '../components/IkigaiDiagram';
 import { ShareableCard } from '../components/ShareableCard';
-import { clearSavedSession } from '../lib/sessionPersistence';
+import { clearSavedSession, loadSynthesisBackup, clearSynthesisBackup } from '../lib/sessionPersistence';
+
+function tryExtractJSON(text: string): IkigaiSynthesis | null {
+  // Try markdown code block
+  const codeBlock = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlock) {
+    try { return JSON.parse(codeBlock[1].trim()); } catch { /* continue */ }
+  }
+  // Try raw JSON object
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    try { return JSON.parse(jsonMatch[0]); } catch { /* continue */ }
+  }
+  return null;
+}
+
+function makeFallbackSynthesis(raw: string): IkigaiSynthesis {
+  return {
+    love: [],
+    goodAt: [],
+    worldNeeds: [],
+    paidFor: [],
+    ikigaiStatement: '',
+    fullSynthesis: raw,
+  };
+}
 
 export default function ResultsPage() {
   const router = useRouter();
@@ -19,17 +44,38 @@ export default function ResultsPage() {
     if (stored) {
       try {
         setSynthesis(JSON.parse(stored));
+        return;
       } catch {
+        // JSON parse failed — try to extract JSON or use raw text
+        const extracted = tryExtractJSON(stored);
+        if (extracted) {
+          setSynthesis(extracted);
+          return;
+        }
+        setSynthesis(makeFallbackSynthesis(stored));
+        return;
+      }
+    }
+    // No sessionStorage — try localStorage backup
+    const backup = loadSynthesisBackup();
+    if (backup) {
+      if (backup.parsed) {
+        setSynthesis(backup.parsed);
+      } else if (backup.raw) {
+        const extracted = tryExtractJSON(backup.raw);
+        setSynthesis(extracted ?? makeFallbackSynthesis(backup.raw));
+      } else {
         router.push('/');
       }
-    } else {
-      router.push('/');
+      return;
     }
+    router.push('/');
   }, [router]);
 
   const handleStartOver = () => {
     sessionStorage.removeItem('ikigai-synthesis');
     clearSavedSession();
+    clearSynthesisBackup();
     router.push('/');
   };
 
@@ -132,6 +178,56 @@ export default function ResultsPage() {
             </div>
           ))}
         </div>
+
+        {/* Suggestions */}
+        {synthesis.suggestions && (synthesis.suggestions.careers?.length || synthesis.suggestions.projects?.length || synthesis.suggestions.experiences?.length) && (
+          <div className="mt-10">
+            <h2 className="text-lg sm:text-xl font-semibold text-[#2D2A26] text-center mb-6">
+              Pistes &agrave; explorer
+            </h2>
+
+            <div className="space-y-4">
+              {synthesis.suggestions.careers?.length > 0 && (
+                <div className="p-5 rounded-2xl bg-violet-50 border border-violet-100">
+                  <h3 className="text-sm font-semibold text-violet-800 mb-3">
+                    🎯 M&eacute;tiers possibles
+                  </h3>
+                  <div className="space-y-2">
+                    {synthesis.suggestions.careers.map((career, i) => (
+                      <p key={i} className="text-sm text-[#4B4540] leading-relaxed">{career}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {synthesis.suggestions.projects?.length > 0 && (
+                <div className="p-5 rounded-2xl bg-amber-50 border border-amber-100">
+                  <h3 className="text-sm font-semibold text-amber-800 mb-3">
+                    🚀 Id&eacute;es de projets
+                  </h3>
+                  <div className="space-y-2">
+                    {synthesis.suggestions.projects.map((project, i) => (
+                      <p key={i} className="text-sm text-[#4B4540] leading-relaxed">{project}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {synthesis.suggestions.experiences?.length > 0 && (
+                <div className="p-5 rounded-2xl bg-emerald-50 border border-emerald-100">
+                  <h3 className="text-sm font-semibold text-emerald-800 mb-3">
+                    🌱 Exp&eacute;riences &agrave; tester
+                  </h3>
+                  <div className="space-y-2">
+                    {synthesis.suggestions.experiences.map((exp, i) => (
+                      <p key={i} className="text-sm text-[#4B4540] leading-relaxed">{exp}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Share button */}
         <div className="mt-8 flex justify-center">

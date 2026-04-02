@@ -32,4 +32,9 @@ export type IkigaiSynthesis = {
   paidFor: string[];
   ikigaiStatement: string;
   fullSynthesis: string;
+  suggestions?: {
+    careers: string[];
+    projects: string[];
+    experiences: string[];
+  };
 };

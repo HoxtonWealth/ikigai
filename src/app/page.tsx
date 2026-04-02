@@ -366,7 +366,55 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Section 5: CTA */}
+        {/* Section 5: Reflection warm-up */}
+        <section className="border-t border-gray-100 py-10">
+          <h2 className="text-xl font-semibold text-[#2D2A26] mb-2">
+            Prenez un moment pour y r&eacute;fl&eacute;chir
+          </h2>
+          <p className="text-sm text-[#6B6560] mb-6 leading-relaxed">
+            Avant de commencer, laissez ces questions infuser doucement...
+          </p>
+
+          <div className="space-y-3">
+            <div className="rounded-xl bg-rose-50 border border-rose-100 p-4">
+              <p className="text-sm font-semibold text-rose-700 mb-1">
+                💜 Qu&apos;est-ce qui vous fait vibrer ?
+              </p>
+              <p className="text-xs text-[#6B6560] leading-relaxed">
+                Une activit&eacute; o&ugrave; vous perdez la notion du temps, un sujet dont vous pourriez parler pendant des heures...
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-amber-50 border border-amber-100 p-4">
+              <p className="text-sm font-semibold text-amber-700 mb-1">
+                🧡 Dans quoi &ecirc;tes-vous dou&eacute;(e) ?
+              </p>
+              <p className="text-xs text-[#6B6560] leading-relaxed">
+                Ce que les autres remarquent chez vous, ce qui vous vient naturellement mais semble difficile pour d&apos;autres...
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-emerald-50 border border-emerald-100 p-4">
+              <p className="text-sm font-semibold text-emerald-700 mb-1">
+                💚 Quel probl&egrave;me dans le monde vous touche profond&eacute;ment ?
+              </p>
+              <p className="text-xs text-[#6B6560] leading-relaxed">
+                Une cause qui vous tient &agrave; c&oelig;ur, une injustice qui vous r&eacute;volte, un besoin que vous aimeriez combler...
+              </p>
+            </div>
+
+            <div className="rounded-xl bg-violet-50 border border-violet-100 p-4">
+              <p className="text-sm font-semibold text-violet-700 mb-1">
+                💙 Comment aimeriez-vous gagner votre vie id&eacute;alement ?
+              </p>
+              <p className="text-xs text-[#6B6560] leading-relaxed">
+                Si vous pouviez choisir librement, quel type de travail vous ferait vous lever chaque matin avec enthousiasme ?
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 6: CTA */}
         <section className="border-t border-gray-100 py-10 text-center pb-16">
           <button
             onClick={() => setShowMicSetup(true)}
