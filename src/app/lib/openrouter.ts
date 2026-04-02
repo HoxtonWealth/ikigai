@@ -10,11 +10,17 @@ const HEADERS = {
   'X-Title': 'Ikigai Coach',
 };
 
-async function openRouterFetch(messages: Message[], stream: boolean): Promise<Response> {
+async function openRouterFetch(messages: Message[], stream: boolean, maxTokens: number = 400): Promise<Response> {
   const response = await fetch(OPENROUTER_API_URL, {
     method: 'POST',
     headers: HEADERS,
-    body: JSON.stringify({ model: MODEL, messages, ...(stream && { stream: true }) }),
+    body: JSON.stringify({
+      model: MODEL,
+      messages,
+      max_tokens: maxTokens,
+      frequency_penalty: 0.3,
+      ...(stream && { stream: true }),
+    }),
   });
 
   if (!response.ok) {
@@ -26,11 +32,11 @@ async function openRouterFetch(messages: Message[], stream: boolean): Promise<Re
 }
 
 export async function chatCompletion(messages: Message[]): Promise<string> {
-  const response = await openRouterFetch(messages, false);
+  const response = await openRouterFetch(messages, false, 2000);
   const data = await response.json();
   return data.choices[0].message.content;
 }
 
 export async function chatCompletionStream(messages: Message[]): Promise<Response> {
-  return openRouterFetch(messages, true);
+  return openRouterFetch(messages, true, 400);
 }

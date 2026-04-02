@@ -49,6 +49,7 @@ export default function SessionPage() {
   const [textInput, setTextInput] = useState('');
   const [hasStarted, setHasStarted] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wasCoachSpeaking = useRef(false);
 
@@ -85,6 +86,18 @@ export default function SessionPage() {
     };
   }, [isListening, transcript]);
 
+  // Warn user before closing tab during synthesis
+  useEffect(() => {
+    if (phase === 'synthesizing') {
+      const handler = (e: BeforeUnloadEvent) => {
+        e.preventDefault();
+        e.returnValue = '';
+      };
+      window.addEventListener('beforeunload', handler);
+      return () => window.removeEventListener('beforeunload', handler);
+    }
+  }, [phase]);
+
   const handleStart = useCallback(() => {
     unlockAudio();
     setHasStarted(true);
@@ -118,9 +131,9 @@ export default function SessionPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading, error]);
 
-  // Auto-activate mic when coach finishes speaking
+  // Auto-activate mic when coach finishes speaking — only if user is in voice mode
   useEffect(() => {
-    if (wasCoachSpeaking.current && !isCoachSpeaking && !isLoading && isSupported) {
+    if (wasCoachSpeaking.current && !isCoachSpeaking && !isLoading && isSupported && inputMode === 'voice') {
       const timer = setTimeout(() => {
         resetTranscript();
         startListening();
@@ -129,14 +142,13 @@ export default function SessionPage() {
       return () => clearTimeout(timer);
     }
     wasCoachSpeaking.current = isCoachSpeaking;
-  }, [isCoachSpeaking, isLoading, isSupported, resetTranscript, startListening, setUserSpeaking]);
+  }, [isCoachSpeaking, isLoading, isSupported, inputMode, resetTranscript, startListening, setUserSpeaking]);
 
-  // Navigate to results when synthesis is ready
+  // Navigate to results when synthesis is ready (data already stored by fireRequest)
   useEffect(() => {
     if (phase === 'results' && synthesis) {
       if (isListening) stopListening();
       const timer = setTimeout(() => {
-        sessionStorage.setItem('ikigai-synthesis', JSON.stringify(synthesis));
         router.push('/results');
       }, 1500);
       return () => clearTimeout(timer);
@@ -156,10 +168,26 @@ export default function SessionPage() {
   }, [stopListening, setUserSpeaking, transcriptRef, sendMessage, resetTranscript]);
 
   const handleStartRecording = useCallback(() => {
+    setTextInput('');
+    setInputMode('voice');
     resetTranscript();
     startListening();
     setUserSpeaking(true);
   }, [resetTranscript, startListening, setUserSpeaking]);
+
+  // Switch to text mode when the text field is focused while mic is active
+  const handleTextFocus = useCallback(() => {
+    if (isListening) {
+      const currentTranscript = (transcriptRef.current ?? '').trim();
+      stopListening();
+      setUserSpeaking(false);
+      resetTranscript();
+      if (currentTranscript) {
+        setTextInput(currentTranscript);
+      }
+    }
+    setInputMode('text');
+  }, [isListening, transcriptRef, stopListening, setUserSpeaking, resetTranscript]);
 
   const handleTextSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -184,7 +212,10 @@ export default function SessionPage() {
 
   // Resume screen — shown when saved session exists and user hasn't started
   if (!hasStarted && savedSession) {
-    const phaseLabel = PHASE_LABELS[savedSession.phase] || savedSession.phase;
+    const isSynthesisRecovery = savedSession.phase === 'synthesizing';
+    const phaseLabel = isSynthesisRecovery
+      ? 'Synthèse en cours'
+      : PHASE_LABELS[savedSession.phase] || savedSession.phase;
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-[var(--background)]">
         <div className="text-center max-w-sm">
@@ -192,10 +223,14 @@ export default function SessionPage() {
             🧘
           </div>
           <h2 className="text-2xl font-semibold text-[#2D2A26] mb-3">
-            Vous aviez une session en cours
+            {isSynthesisRecovery
+              ? 'Votre synthèse a été interrompue'
+              : 'Vous aviez une session en cours'}
           </h2>
           <p className="text-gray-500 mb-2 leading-relaxed">
-            Vous en étiez à &laquo;&nbsp;{phaseLabel}&nbsp;&raquo;.
+            {isSynthesisRecovery
+              ? 'Vos réponses sont intactes — on peut relancer la synthèse.'
+              : <>Vous en étiez à &laquo;&nbsp;{phaseLabel}&nbsp;&raquo;.</>}
           </p>
           <p className="text-sm text-[#8B8580] mb-8">
             Vos réponses sont sauvegardées sur votre appareil.
@@ -205,7 +240,7 @@ export default function SessionPage() {
               onClick={handleResume}
               className="px-8 py-4 rounded-full bg-violet-500 text-white text-lg font-semibold hover:bg-violet-600 active:scale-95 transition-all shadow-lg shadow-violet-200"
             >
-              Reprendre
+              {isSynthesisRecovery ? 'Relancer la synthèse' : 'Reprendre'}
             </button>
             <button
               onClick={handleFreshStart}
@@ -311,7 +346,8 @@ export default function SessionPage() {
                 Réflexion sur tout ce que vous avez partagé...
               </h2>
               <p className="text-gray-500">Découverte des connexions entre vos passions, compétences et raison d&apos;être</p>
-              <div className="mt-8 flex justify-center gap-2">
+              <p className="text-xs text-[#8B8580] mt-4">Merci de ne pas fermer cette page</p>
+              <div className="mt-6 flex justify-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '0ms' }} />
                 <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '150ms' }} />
                 <span className="w-2 h-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: '300ms' }} />
@@ -450,6 +486,7 @@ export default function SessionPage() {
                 type="text"
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
+                onFocus={handleTextFocus}
                 placeholder={
                   isCoachSpeaking
                     ? 'Le coach parle...'

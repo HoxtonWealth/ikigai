@@ -4,7 +4,25 @@ import { useState, useCallback, useRef } from 'react';
 import { Message, Phase, CoachingPhase, SessionState, IkigaiSynthesis } from '../lib/types';
 import { useAudioPlayer } from './useAudioPlayer';
 import { fetchWithRetry } from '../lib/fetchWithRetry';
-import { saveSession, clearSavedSession, SavedSession } from '../lib/sessionPersistence';
+import { saveSession, clearSavedSession, saveSynthesisBackup, SavedSession } from '../lib/sessionPersistence';
+
+const MAX_TTS_CONCURRENT = 2;
+
+function createSemaphore(max: number) {
+  let count = 0;
+  const queue: (() => void)[] = [];
+  return {
+    acquire: () => new Promise<void>(resolve => {
+      if (count < max) { count++; resolve(); }
+      else queue.push(() => { count++; resolve(); });
+    }),
+    release: () => {
+      count--;
+      const next = queue.shift();
+      if (next) next();
+    },
+  };
+}
 
 const MESSAGES_PER_PHASE = 5;
 
@@ -130,6 +148,7 @@ export function useCoachSession() {
     ) => {
       let displayedText = '';
       let audioChain = Promise.resolve();
+      const sem = createSemaphore(MAX_TTS_CONCURRENT);
 
       setState((prev) => ({
         ...prev,
@@ -153,7 +172,14 @@ export function useCoachSession() {
             ],
           }));
 
-          const ttsPromise = ttsSentence(sentence);
+          const ttsPromise = (async () => {
+            await sem.acquire();
+            try {
+              return await ttsSentence(sentence);
+            } finally {
+              sem.release();
+            }
+          })();
           audioChain = audioChain.then(async () => {
             const audioData = await ttsPromise;
             if (audioData) enqueueAudio(audioData);
@@ -202,19 +228,36 @@ export function useCoachSession() {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        // fetchWithRetry instead of bare fetch
-        const chatRes = await fetchWithRetry(
-          '/api/chat',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              messages: pending.updatedMessages.filter((m) => m.role !== 'system'),
-              phase: pending.phaseForApi,
-            }),
-          },
-          { retries: 2, delay: 2000 },
-        );
+        const requestBody = JSON.stringify({
+          messages: pending.updatedMessages.filter((m) => m.role !== 'system'),
+          phase: pending.phaseForApi,
+        });
+        const requestHeaders = { 'Content-Type': 'application/json' };
+
+        let chatRes: Response;
+
+        if (pending.phaseForApi === 'synthesis') {
+          // Synthesis: non-streaming — retries make sense
+          chatRes = await fetchWithRetry(
+            '/api/chat',
+            { method: 'POST', headers: requestHeaders, body: requestBody },
+            { retries: 2, delay: 2000 },
+          );
+        } else {
+          // Streaming: fail fast with 45s abort instead of 3x60s retry loop
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 45000);
+          try {
+            chatRes = await fetch('/api/chat', {
+              method: 'POST',
+              headers: requestHeaders,
+              body: requestBody,
+              signal: controller.signal,
+            });
+          } finally {
+            clearTimeout(timeout);
+          }
+        }
 
         if (!chatRes.ok) throw new Error('Chat API failed');
 
@@ -236,6 +279,10 @@ export function useCoachSession() {
             };
           }
 
+          // Store synthesis in sessionStorage + localStorage backup before clearing session
+          sessionStorage.setItem('ikigai-synthesis', JSON.stringify(synthesis));
+          saveSynthesisBackup(response, synthesis);
+
           setState((prev) => ({
             ...prev,
             phase: 'results',
@@ -244,7 +291,6 @@ export function useCoachSession() {
             messages: [...pending.updatedMessages, { role: 'assistant' as const, content: response }],
           }));
 
-          // Clear saved session — they made it to results
           clearSavedSession();
           pendingRef.current = null;
           return;
@@ -259,7 +305,6 @@ export function useCoachSession() {
           pending.newPhaseCount,
         );
       } catch {
-        // Set error state instead of silently swallowing
         const errorType = pending.phaseForApi === 'synthesis' ? 'synthesis' : 'chat';
         setState((prev) => ({
           ...prev,

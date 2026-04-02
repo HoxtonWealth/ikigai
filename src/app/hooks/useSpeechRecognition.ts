@@ -21,6 +21,8 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef<string>('');
   const isStoppingRef = useRef(false);
+  // Accumulated finalized text from previous recognition sessions (across auto-restarts)
+  const accumulatedRef = useRef<string>('');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -36,10 +38,13 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
       recognition.lang = 'fr-FR';
 
       recognition.onresult = (event: any) => {
-        let full = '';
+        let sessionText = '';
         for (let i = 0; i < event.results.length; i++) {
-          full += event.results[i][0].transcript;
+          sessionText += event.results[i][0].transcript;
         }
+        const full = accumulatedRef.current
+          ? accumulatedRef.current + ' ' + sessionText
+          : sessionText;
         transcriptRef.current = full;
         setTranscript(full);
       };
@@ -48,6 +53,8 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
         // With continuous: true, recognition can end unexpectedly (e.g. silence timeout).
         // Restart if we haven't explicitly stopped.
         if (!isStoppingRef.current && recognitionRef.current) {
+          // Save finalized text before restarting so it's not lost
+          accumulatedRef.current = transcriptRef.current;
           try {
             recognitionRef.current.start();
           } catch {
@@ -72,6 +79,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   const startListening = useCallback(() => {
     if (!recognitionRef.current) return;
     isStoppingRef.current = false;
+    accumulatedRef.current = '';
     transcriptRef.current = '';
     setTranscript('');
     try {
@@ -90,6 +98,7 @@ export function useSpeechRecognition(): UseSpeechRecognitionReturn {
   }, []);
 
   const resetTranscript = useCallback(() => {
+    accumulatedRef.current = '';
     transcriptRef.current = '';
     setTranscript('');
   }, []);
