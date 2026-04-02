@@ -30,6 +30,11 @@
 **Fix:** Added `inputMode` state ('voice' | 'text') to `session/page.tsx`. Auto-activation only fires when `inputMode === 'voice'`. Focusing the text field switches to text mode and transfers any active transcript.
 **Lesson:** When two input modes coexist, track which one is active and don't override the user's choice.
 
+## 008 — Gradium TTS 500s after provider switch (2026-04-02)
+**What:** After replacing ElevenLabs with Gradium, all TTS calls returned 500. The error handler used `response.json()` which throws if Gradium returns non-JSON errors, swallowing the real error message. Also, Vercel env vars (GRADIUM_API_KEY, GRADIUM_VOICE_ID) may not have been set yet.
+**Fix:** Changed error handling to `response.text()` first, then try `JSON.parse()` with fallback. Added `console.error` before throwing so the actual error appears in Vercel runtime logs.
+**Lesson:** When switching API providers, always: (1) use text-first error parsing since you don't know the error format yet, (2) verify env vars are set in Vercel before deploying, (3) add explicit error logging so truncated Vercel logs still show the cause.
+
 ## 007 — Transcript lost on speech silence restart (2026-04-01)
 **What:** Web Speech API's `event.results` resets when recognition restarts after a silence timeout. The `onresult` handler rebuilt the transcript from scratch, losing everything the user said before the pause.
 **Fix:** Added `accumulatedRef` in `useSpeechRecognition.ts` that saves finalized text before auto-restart. `onresult` prepends accumulated text to new results. Reset only on explicit `startListening`/`resetTranscript`.

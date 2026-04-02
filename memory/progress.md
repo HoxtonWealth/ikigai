@@ -14,7 +14,7 @@
 ## Epic 1 — Scaffold & API Routes (DONE)
 - [x] Story 1.1 — Initialize Next.js 14 project (App Router, TypeScript, Tailwind)
 - [x] Story 1.2 — OpenRouter chat API route (/api/chat)
-- [x] Story 1.3 — ElevenLabs TTS API route (/api/tts)
+- [x] Story 1.3 — TTS API route (/api/tts) — now Gradium (was ElevenLabs)
 - [x] Story 1.4 — AI coach prompts system (phase-specific prompts)
 - [x] Story 1.5 — TypeScript types (Message, Phase, SessionState, IkigaiSynthesis)
 
@@ -48,7 +48,7 @@
 - [x] Gradium TTS — replaced ElevenLabs with Gradium (gradium.ts, route.ts Content-Type → audio/wav, all docs updated)
 
 ## Bug Fix Batch (2026-04-02) — 9 fixes from production log analysis
-- [x] TTS rate limiting — semaphore caps concurrent ElevenLabs calls to 2 (useCoachSession.ts)
+- [x] TTS rate limiting — semaphore caps concurrent TTS calls to 2 (useCoachSession.ts)
 - [x] AI repetition loop — max_tokens: 400/2000 + frequency_penalty: 0.3 (openrouter.ts)
 - [x] First message too long — stricter prompt: "3 phrases MAXIMUM" (prompts.ts)
 - [x] Chat 504 timeout UX — 45s AbortController for streaming, no retries (useCoachSession.ts)
